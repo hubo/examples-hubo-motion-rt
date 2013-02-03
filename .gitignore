@@ -23,6 +23,8 @@ ltmain.sh
 missing
 stamp-h1
 Makefile
+config*
+!configure.ac
 
 
 #################

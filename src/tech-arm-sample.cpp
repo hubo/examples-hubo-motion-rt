@@ -9,7 +9,7 @@ int main( int argc, char **argv )
     Vector6d q;
     
     // The left shift operator is a convenient way of setting the values of a Vector6d:
-    q << 0, 0, 0, -M_PI/2, -0.3, 0;
+    q << -20.0/180.0*M_PI, 0, 0, -M_PI/2+20.0/180.0*M_PI, -0.3, 0;
     
     // This will tell the control daemon that you want the right arm joints to move to the positions specified by q:
     hubo.setRightArmAngles( q, true );

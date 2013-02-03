@@ -1,4 +1,4 @@
-#include "Hubo_Tech.h"
+#include <Hubo_Tech.h>
 #include <vector>
 // Note that "std::vector" is a dynamic array class in C++ (not available in C)
 // This means you can use std::vector to make a variable-sized array of Vector6d
@@ -8,7 +8,7 @@ int main( int argc, char **argv )
 {
     Hubo_Tech hubo;
     
-    std::vector<Vector6> angles(5); // This declares "angles" as a dynamic array of Vector6ds with a starting array length of 5
+    std::vector<Vector6d> angles(5); // This declares "angles" as a dynamic array of Vector6ds with a starting array length of 5
     angles[0] <<   0.0556916,   0.577126,  0.0816814,  -0.492327, 0, 0;
     angles[1] <<  -1.07878,  0.408266, -0.477742, -0.665062, 0, 0;
     angles[2] <<   -1.17367, -0.0540511,  -0.772141,  -0.503859, 0, 0;
@@ -21,7 +21,7 @@ int main( int argc, char **argv )
     int traj = 0; // This will keep track of our current target on the trajectory
     while( true )
     {
-        hubo.update() // This grabs the latest state information
+        hubo.update(); // This grabs the latest state information
         
         hubo.getLeftArmAngleStates( currentPosition ); // This will fill in the values of "currentPosition" by passing it in by reference
         // If you are unfamiliar with "passing by reference", let me know and I can explain the concept. It's a feature of C++ but not C

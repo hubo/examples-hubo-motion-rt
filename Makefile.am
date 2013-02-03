@@ -4,7 +4,7 @@ AM_CPPFLAGS = -I$(top_srcdir)/include -L/usr/local/lib
 techlibs = -lm -lach -lc -lhubotech -ldaemonizer -lrt -lhuboparams
 
 # List the binary files you want to generate:
-bin_PROGRAMS = tech-sample tech-arm-sample tech-trajectory-sample
+bin_PROGRAMS = tech-sample tech-arm-sample tech-trajectory-sample tech-request-ik
 
 
 # For each one, list the .cpp sources:
@@ -20,4 +20,7 @@ tech_arm_sample_LDADD = $(techlibs)
 tech_trajectory_sample_SOURCES = src/tech-trajectory-sample.cpp
 tech_trajectory_sample_LDADD = $(techlibs)
 
+
+tech_request_ik_SOURCES = src/tech-request-ik.cpp
+tech_request_ik_LDADD = $(techlibs)
 
