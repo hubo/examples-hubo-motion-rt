@@ -38,10 +38,12 @@ ____________________________________________________________
 $ make
 (If an error occurs here, please contact mxgrey@gatech.edu)
 Possible issues:
- -- Cannot link to libhuboparams.so : Make sure to install the latest version of hubo-ach
-    (which means running "$ git pull", "$ autoreconf -i", "$ ./configure" and "$ sudo make install"
-    in your hubo-ach directory.
- -- Cannot link to libhubotech.so or libdaemonizer.so OR cannot find Hubo_Tech.h : 
+
+ -- Cannot link to libhuboparams.so or error: hubo-jointparams.h: No such file or directory:
+    Make sure to install the latest version of hubo-ach (which means running "$ git pull",
+    "$ autoreconf -i", "$ ./configure" and "$ sudo make install" in your hubo-ach directory.
+
+ -- Cannot link to libhubotech.so or libdaemonizer.so OR cannot find Hubo_Tech.h: 
     Make sure to install the latest version of Hubo-Motion-RT. This package depends on it.
 
 If you want to install the executables system-wide (so you can call them from any terminal) use
