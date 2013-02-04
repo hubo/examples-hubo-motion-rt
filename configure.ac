@@ -1,9 +1,8 @@
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
-AC_PREREQ([2.69])
-AC_INIT([Hubo_Tech],[0.0.0],[mxgrey@gatech.edu])
-AM_INIT_AUTOMAKE([-Wall])
+AC_PREREQ([2.67])
+AC_INIT([Hubo-Motion-RT],[0.0.0],[mxgrey@gatech.edu])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([m4])
 
@@ -11,7 +10,6 @@ AC_CONFIG_MACRO_DIR([m4])
 AC_USE_SYSTEM_EXTENSIONS
 AC_PROG_CC
 AC_PROG_CXX
-AC_PROG_LIBTOOL
 
 LT_INIT
 
