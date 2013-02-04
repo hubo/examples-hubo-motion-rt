@@ -3,6 +3,7 @@
 
 AC_PREREQ([2.67])
 AC_INIT([Hubo-Motion-RT],[0.0.0],[mxgrey@gatech.edu])
+AM_INIT_AUTOMAKE(Hubo-Motion-RT, 0.1)
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([m4])
 

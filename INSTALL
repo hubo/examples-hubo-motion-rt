@@ -6,7 +6,9 @@ Pre-requisites: Hubo-Motion-RT (https://github.com/hubo/Hubo-Motion-RT) and hubo
 
 0. This package uses autotools. If you're not sure whether you have autotools, put the following
 into the terminal:
-$ sudo apt-get install autotools-dev
+$ sudo apt-get update
+$ sudo apt-get upgrade
+$ sudo apt-get install autoconf
 
 ____________________________________________________________
 
