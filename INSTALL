@@ -18,8 +18,7 @@ ____________________________________________________________
 the terminal:
 
 $ mkdir m4
-(Sometimes there is a complaint about this not existing. If it already exists, then don't worry
-about this step.)
+(If it already exists, then don't worry about this step.)
 
 $ autoreconf -i
 (Give this some time. It can take a while.)
@@ -38,6 +37,12 @@ ____________________________________________________________
 
 $ make
 (If an error occurs here, please contact mxgrey@gatech.edu)
+Possible issues:
+ -- Cannot link to libhuboparams.so : Make sure to install the latest version of hubo-ach
+    (which means running "$ git pull", "$ autoreconf -i", "$ ./configure" and "$ sudo make install"
+    in your hubo-ach directory.
+ -- Cannot link to libhubotech.so or libdaemonizer.so OR cannot find Hubo_Tech.h : 
+    Make sure to install the latest version of Hubo-Motion-RT. This package depends on it.
 
 If you want to install the executables system-wide (so you can call them from any terminal) use
 the following command:
