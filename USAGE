@@ -1,0 +1,206 @@
+USAGE INSTRUCTIONS
+******************
+
+
+Look at the INSTALL file for instructions on compiling and installing (if desired).
+
+Compiling this package will generate four executables. The source code for each of these
+is in the src/ directory. Below is a list of these executables (in order of increasing
+complexity) and a brief description of what they each do. For details on how they work,
+please look at the comments in their source code.
+
+
+tech-sample.cpp             : Moves the right elbow joint by 90-degrees using position control.
+tech-arm-sample.cpp         : Moves the right arm from its current configuration to a hand-shake position
+tech-trajectory-sample.cpp  : Moves the left arm along a looping trajectory defined by five points in jointspace
+tech-request-ik.cpp         : Sends an end effector position request to the prototype manipulator daemon
+                              (Note that you need to explicitly run the proto-manip-daemon executable from
+                               the hubo-motion-rt directory in order for this to do anything)
+
+Regarding tech-request-ik, if you want to perform inverse kinematics for Hubo in C++, it would be far
+easier to use the Inverse Kinematics functions built into Hubo_Tech. I would recommend seeing the
+proto-manip-daemon for an example of how to use them.
+
+
+
+~~~~~~~~~~~~~~~
+Using Hubo_Tech
+***************
+
+Hubo_Tech is a class which wraps up a bunch of data and process management tasks in a convenient way.
+It also provides kinematics calculations for Hubo's limbs and will ultimately provide dynamic models
+as well.
+
+In addition to providing an interface to the control-daemon of hubo-motion-rt, it also takes care
+of updating the hubo state information and all pertinent ach channels. It also provides a way to
+daemonize your application, simply by passing a literal string argument into the constructor, 
+i.e. Hubo_Tech hubo("name-of-daemon"). Daemonizing your process has it run in the background and
+generate log files instead of printing to a terminal. Those logs can be accessed from the terminal
+with the tech script: "$ sudo service tech log" will print out the logs for all processes daemonized
+using Hubo_Tech.
+
+
+The functions of Hubo_Tech follow a fairly consistent format which offers many different ways to
+think about controlling the joints of your Hubo.
+
+The format structures are listed below. Replace <~~~> with something in its list to get an actual function
+
+Important functions:
+
+update() : Grabs all the latest state data. Recommended to use at the beginning of any control loop
+sendControls() : Sends the latest control commands off to the control-daemon
+double getTime() : Returns the time of the latest state information
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Single joint control:
+
+setJoint<param>( int joint, double val, bool send=false )
+
+<param> :
+ -- Angle
+ -- NominalSpeed
+ -- Velocity
+ -- NominalAcceleration
+
+joint : joint index number (e.g. RSP for right shoulder pitch)
+val   : desired value of <param> for the joint
+send  : make this "true" to immediately send the command
+
+Examples: setJointAngles( RSR, M_PI/2.0 ); <---- Leaving out the last parameter defaults it to false
+          setJointVelocity( REB, 0.3, true );
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Limb control:
+
+set<limb><param>( int side, Vector6d q, bool send=false )
+
+<limb> :
+ -- Arm
+ -- Leg
+ (Not implemented yet: -- Fin [finger])
+
+<param> : (Notice that these are plural)
+ -- Angles
+ -- NomSpeeds
+ -- Vels
+ -- NomAcc
+
+side : LEFT or RIGHT (these are #define LEFT=1 and #define RIGHT=0)
+q    : Some Vector6d whose values want for the <param> of each of the joints in the limb
+send : make this "true" to immediately send the command
+
+Example: setArmAngles( RIGHT, q );
+
+Alternative:
+
+set<side><limb><param>( Vector6d q, bool send=false )
+
+<side> :
+ -- Left
+ -- Right
+
+Example: setLeftArmVels( q );
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Single joint gets:
+
+double getJoint<param>( int joint )
+
+<param> :
+ -- Angle
+ -- NominalSpeed
+ -- Velocity
+ -- NominalAcceleration
+
+The "double" return of this function will be whatever <param> corresponds to.
+
+Example: double speed = getJointNominalSpeed( LWY );
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Limb gets:
+
+void get<limb><param>( int side, Vector6d &q )
+
+<limb> :
+ -- Arm
+ -- Leg
+ (Not implemented yet: -- Fin [finger])
+
+<param> : (Notice that these are plural)
+ -- Angles (motor board position reference values)
+ -- AngleStates (actual state values)
+ -- AngleCtrls (latest position control command)
+ -- NomSpeeds
+ -- VelCtrls (latest velocity control command)
+ -- NomAcc
+
+You pass in q by reference (http://www.learncpp.com/cpp-tutorial/73-passing-arguments-by-reference/)
+and it gets filled in with the values corresponding to <param> for all of the joints in <limb>.
+
+Example: getArmAngles( LEFT, q );
+
+Alternative:
+
+void get<side><limb><param>( Vector6d &q )
+
+<side> :
+ -- Left
+ -- Right
+
+Example: getRightLegAngles( RIGHT, q );
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+FT-Sensor gets:
+
+double get<param>( hubo_sensor_index_t sensor )
+
+<param> :
+ -- Mx
+ -- My
+ -- Fz
+
+sensor : HUBO_FT_R_FOOT, HUBO_FT_L_FOOT, HUBO_FT_R_HAND, HUBO_FT_L_HAND
+
+Example: double mx = getMx( HUBO_FT_L_FOOT );
+
+Alternative:
+
+double get<sensor><param>()
+
+<sensor> :
+ -- RightHand
+ -- LeftHand
+ -- RightFoot
+ -- LeftFoot
+
+Example: double my = getRightHandMy();
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+IMU gets:
+
+double get<param><axis>()
+
+<param>
+ -- Angle
+ -- RotVel (rotational velocity)
+
+<axis>
+ -- X
+ -- Y
+
+Example: double w = getRotVelX();
+
+
+
+
+
+
+
+
+
