@@ -7,8 +7,8 @@
 int main( int argc, char **argv )
 {
     Hubo_Tech hubo;
-    
-    std::vector<Vector6d> angles(5); // This declares "angles" as a dynamic array of Vector6ds with a starting array length of 5
+
+    std::vector<Vector6d, Eigen::aligned_allocator<Vector6d> > angles(5); // This declares "angles" as a dynamic array of Vector6ds with a starting array length of 5
     angles[0] <<   0.0556916,   0.577126,  0.0816814,  -0.492327, 0, 0;
     angles[1] <<  -1.07878,  0.408266, -0.477742, -0.665062, 0, 0;
     angles[2] <<   -1.17367, -0.0540511,  -0.772141,  -0.503859, 0, 0;
