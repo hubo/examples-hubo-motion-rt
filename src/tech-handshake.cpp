@@ -2,7 +2,7 @@
 
 int main( int argc, char **argv )
 {
-    Hubo_Tech hubo("tech-handshake");
+    Hubo_Tech hubo;
 
     Vector6d ql, ql0, qr, qr0;
     double time, dt;
