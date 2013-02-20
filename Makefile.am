@@ -14,7 +14,7 @@ tech_sample_LDADD = $(techlibs)
 
 # Replace any dashes with underscores
 tech_arm_sample_SOURCES = src/tech-arm-sample.cpp
-tech_arm_sample_LDADD = $(techlibs)
+tech_arm_sample_LDADD = $(techlibs) -lfastrak
 
 
 tech_trajectory_sample_SOURCES = src/tech-trajectory-sample.cpp

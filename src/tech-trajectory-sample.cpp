@@ -16,6 +16,8 @@ int main( int argc, char **argv )
     angles[4] << 0, 0, 0, 0, 0, 0;
     // Obviously we could easily set up some code which reads in these values out of a pre-recorded file
     Vector6d currentPosition;  // This Vector6d will be used to track our current angle configuration
+
+    Vector6d rangles;
     
     double tol = 0.075; // This will be the allowed tolerance before moving to the next point
     int traj = 0; // This will keep track of our current target on the trajectory
@@ -33,7 +35,15 @@ int main( int argc, char **argv )
                 traj = 0;
         }
         
+        rangles = angles[traj];
+
+        rangles(1) = -rangles(1);
+        rangles(2) = -rangles(2);
+        hubo.setRightArmAngles( rangles, false );
+
+
         hubo.setLeftArmAngles( angles[traj] ); // Notice that the second argument is not passed in, making it default to "false"
+        
         
         hubo.sendControls(); // This will send off all the latest control commands over ACH
     }
