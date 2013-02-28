@@ -23,7 +23,7 @@ int main( int argc, char **argv )
     int traj = 0; // This will keep track of our current target on the trajectory
     while( true )
     {
-        hubo.update(); // This grabs the latest state information
+        hubo.update(true); // This grabs the latest state information
         
         hubo.getLeftArmAngleStates( currentPosition ); // This will fill in the values of "currentPosition" by passing it in by reference
         // If you are unfamiliar with "passing by reference", let me know and I can explain the concept. It's a feature of C++ but not C

@@ -22,7 +22,7 @@ const double craneTransitionPercent = 15.0; // Percent of weight on swing foot b
 
 const double crouchGain = 0.30;  // Leg-lifting gain
 
-
+const double hipDistance = 0.08843*2.0; // Distance between hip joints
 
 
 
@@ -68,7 +68,7 @@ void calibrateBoth( Hubo_Tech &hubo ) // Dynamic -- Precondition: Horse Stance
     }
     hubo.calibrateAnkle( RIGHT );
     hubo.calibrateAnkle( LEFT );
-
+    hubo.calibrateAnkleForces();
 }
 
 void horseStance( Hubo_Tech &hubo ) // Static Stance
@@ -82,6 +82,13 @@ void horseStance( Hubo_Tech &hubo ) // Static Stance
 
     hubo.sendControls();
 
+}
+
+void craneStance( int side, Hubo_Tech &hubo, double dt )
+{
+    Vector6d swingVels;
+    swingVels.setZero();
+    craneStance( side, swingVels, hubo, dt );
 }
 
 void craneStance( int side, Vector6d swingVels, Hubo_Tech &hubo, double dt ) // Static Stance
@@ -112,10 +119,6 @@ void craneStance( int side, Vector6d swingVels, Hubo_Tech &hubo, double dt ) // 
             rqvel(AR) = 0.0;
             rqvel(HR) = craneHipRollGain*( -hubo.getRightFootMx() );
             lqvel(HR) += rqvel(HR);
-
-            std::cout << "Crossed the boundary: " << hubo.getJointAngleState(RHR) << ", "
-                    << hubo.getJointAngleState(RAR) << "\t:\t" << hubo.getJointAngle(RAR)+rqvel(AR)*dt
-                    << ", " << hubo.getJointAngleMin(RAR) << std::endl;
         }
         
         
@@ -136,13 +139,17 @@ void craneStance( int side, Vector6d swingVels, Hubo_Tech &hubo, double dt ) // 
         lqvel(AP) += craneAngleMultiplier*pitchAngleGain*hubo.getAngleY()
                     + craneCompMultiplier*compPitchGain*hubo.getLeftFootMy();
 
-        if(    hubo.getJointAngle(LAR)+lqvel(AR)*dt < hubo.getJointAngleMin(LAR)
+        if(    hubo.getJointAngle(LAR)+lqvel(AR)*dt > hubo.getJointAngleMax(LAR)
             || (hubo.getJointAngleState(LHR) + hubo.getJointAngleState(LAR) > 0.0
                 && hubo.getJointAngleState(LAR) > 0 && hubo.getJointAngleState(LHR) < 0) )
         {
             lqvel(AR) = 0.0;
             lqvel(HR) = craneHipRollGain*( -hubo.getLeftFootMx() );
             rqvel(HR) += lqvel(HR);
+
+            std::cout << "Crossed the boundary: " << hubo.getJointAngleState(LHR) << ", "
+                    << hubo.getJointAngleState(LAR) << "\t:\t" << hubo.getJointAngle(LAR)+rqvel(AR)*dt
+                    << ", " << hubo.getJointAngleMin(LAR) << std::endl;
         }
 
 
@@ -299,7 +306,7 @@ int main(int argc, char **argv)
 {
     Hubo_Tech hubo;
 
-//    calibrateBoth(hubo);
+    calibrateBoth(hubo);
 
 
 
@@ -309,6 +316,7 @@ int main(int argc, char **argv)
     double time = stime;
 
     bool ready = false;
+    bool go = false;
 
     stime = hubo.getTime();
     time = hubo.getTime();
@@ -316,17 +324,26 @@ int main(int argc, char **argv)
     while( true ) //time-stime < 5 )
     {
 
-        hubo.update();
+        hubo.update(true);
         dt = hubo.getTime() - time;
         time = hubo.getTime();
         
 
         if( dt > 0 )
         {
-//            if( !ready )
-//                ready = shiftToSide( RIGHT, hubo, dt );
-//            else
-                liftLeg( LEFT, 0.15, hubo, dt );
+/*            if( !ready )
+                ready = shiftToSide( LEFT, hubo, dt );
+            else
+                shiftToSide( RIGHT, hubo, dt );
+*/
+
+            if( !ready )
+                ready = shiftToSide( LEFT, hubo, dt );
+            else if(!go)
+                go = liftLeg( RIGHT, 0.15, hubo, dt );
+            else
+                craneStance( LEFT, hubo, dt );
+
         }
     }
 
