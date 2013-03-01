@@ -24,6 +24,6 @@ tech_trajectory_sample_LDADD = $(techlibs)
 tech_request_ik_SOURCES = src/tech-request-ik.cpp
 tech_request_ik_LDADD = $(techlibs)
 
-walker_SOURCES = src/walker.cpp
+walker_SOURCES = src/walker.cpp src/balance-monitor.cpp
 walker_LDADD = $(techlibs)
 
