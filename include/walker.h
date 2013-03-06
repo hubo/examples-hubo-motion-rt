@@ -72,7 +72,7 @@ protected:
 void calibrateBoth( Hubo_Tech &hubo );
 void horseStance( Hubo_Tech &hubo );
 void craneStance( int side, Hubo_Tech &hubo, double dt );
-
+void craneStance( int side, Vector6d swingVels, Hubo_Tech &hubo, double dt );
 
 
 // Horse Stance Quasi-Statics
@@ -82,6 +82,5 @@ bool crouch( double height, Hubo_Tech &hubo, double dt );
 
 
 // Crane Stance Quasi-Statics
-bool liftLeg( int side, double height, Hubo_Tech &hubo, double dt );
 bool placeSwingFoot( int side, Eigen::Vector3d footPose, Hubo_Tech &hubo, double dt );
 
