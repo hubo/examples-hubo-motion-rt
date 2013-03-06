@@ -1,4 +1,4 @@
-#include <Hubo_Tech.h>
+#include <Hubo_Control.h>
 #include <vector>
 // Note that "std::vector" is a dynamic array class in C++ (not available in C)
 // This means you can use std::vector to make a variable-sized array of Vector6d
@@ -6,7 +6,7 @@
     
 int main( int argc, char **argv )
 {
-    Hubo_Tech hubo;
+    Hubo_Control hubo;
 
     std::vector<Vector6d, Eigen::aligned_allocator<Vector6d> > angles(5); // This declares "angles" as a dynamic array of Vector6ds with a starting array length of 5
     angles[0] <<   0.0556916,   0.577126,  0.0816814,  -0.492327, 0, 0;

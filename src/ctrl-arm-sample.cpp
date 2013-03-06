@@ -1,8 +1,8 @@
-#include "Hubo_Tech.h"
+#include "Hubo_Control.h"
     
 int main( int argc, char **argv )
 {
-    Hubo_Tech hubo;
+    Hubo_Control hubo;
     
     // Vector6d is derived from the Matrix template in the Eigen C++ library
     // Vector6d is conveniently used for operations related to the arms and legs of Hubo because they are 6 DOF
