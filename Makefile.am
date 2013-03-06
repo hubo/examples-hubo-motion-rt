@@ -1,28 +1,28 @@
 ACLOCAL_AMFLAGS = -I m4
 AM_CPPFLAGS = -I$(top_srcdir)/include -L/usr/local/lib
 
-techlibs = -lm -lach -lc -lhubotech -ldaemonizer -lrt -lhuboparams
+ctrllibs = -lm -lach -lc -lhuboctrl -ldaemonizer -lrt -lhuboparams
 
 # List the binary files you want to generate:
-bin_PROGRAMS = tech-sample tech-arm-sample tech-trajectory-sample tech-request-ik walker
+bin_PROGRAMS = ctrl-sample ctrl-arm-sample ctrl-trajectory-sample ctrl-request-ik
 
 
 # For each one, list the .cpp sources:
-tech_sample_SOURCES = src/tech-sample.cpp
+ctrl_sample_SOURCES = src/ctrl-sample.cpp
 # And then the libraries which they should link to:
-tech_sample_LDADD = $(techlibs)
+ctrl_sample_LDADD = $(ctrllibs)
 
 # Replace any dashes with underscores
-tech_arm_sample_SOURCES = src/tech-arm-sample.cpp
-tech_arm_sample_LDADD = $(techlibs) -lfastrak
+ctrl_arm_sample_SOURCES = src/ctrl-arm-sample.cpp
+ctrl_arm_sample_LDADD = $(ctrllibs)
 
 
-tech_trajectory_sample_SOURCES = src/tech-trajectory-sample.cpp
-tech_trajectory_sample_LDADD = $(techlibs)
+ctrl_trajectory_sample_SOURCES = src/ctrl-trajectory-sample.cpp
+ctrl_trajectory_sample_LDADD = $(ctrllibs)
 
 
-tech_request_ik_SOURCES = src/tech-request-ik.cpp
-tech_request_ik_LDADD = $(techlibs)
+ctrl_request_ik_SOURCES = src/ctrl-request-ik.cpp
+ctrl_request_ik_LDADD = $(ctrllibs)
 
 walker_SOURCES = src/walker.cpp src/balance-monitor.cpp
 walker_LDADD = $(techlibs)
