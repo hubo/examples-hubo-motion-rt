@@ -1,4 +1,33 @@
-#include <Hubo_Tech.h>
+#include <Hubo_Control.h>
+
+
+enum stance_t {
+  DOUBLE_LEFT  = 0,
+  DOUBLE_RIGHT = 1,
+  SINGLE_LEFT  = 2,
+  SINGLE_RIGHT = 3,
+};
+
+typedef struct zmp_traj_element {
+  double angles[HUBO_JOINT_COUNT];
+  double com[3][3]; // XYZ pos/vel/accel in frame of stance foot
+  stance_t stance;
+} zmp_traj_element_t;
+
+enum {
+  TRAJ_FREQ_HZ = 200,
+  MAX_TRAJ_SIZE = 2000,
+};
+
+typedef struct zmp_traj {
+  zmp_traj_element_t traj[MAX_TRAJ_SIZE];
+  size_t count;
+} zmp_traj_t;
+
+#define HUBO_CHAN_ZMP_TRAJ_NAME "hubo-zmp-traj"
+
+
+
 
 const double hipDistance = 0.08843*2.0; // Distance between hip joints
 
@@ -69,18 +98,18 @@ protected:
 
 
 // Stance Controllers
-void calibrateBoth( Hubo_Tech &hubo );
-void horseStance( Hubo_Tech &hubo );
-void craneStance( int side, Hubo_Tech &hubo, double dt );
-void craneStance( int side, Vector6d swingVels, Hubo_Tech &hubo, double dt );
+void calibrateBoth( Hubo_Control &hubo );
+void horseStance( Hubo_Control &hubo );
+void craneStance( int side, Hubo_Control &hubo, double dt );
+void craneStance( int side, Vector6d swingVels, Hubo_Control &hubo, double dt );
 
 
 // Horse Stance Quasi-Statics
-bool shiftToDistribution( int side, double distro, Hubo_Tech &hubo, Balance_Monitor &trans, double dt );
-bool shiftToSide( int side, Hubo_Tech &hubo, Balance_Monitor &trans, double dt );
-bool crouch( double height, Hubo_Tech &hubo, double dt );
+bool shiftToDistribution( int side, double distro, Hubo_Control &hubo, Balance_Monitor &trans, double dt );
+bool shiftToSide( int side, Hubo_Control &hubo, Balance_Monitor &trans, double dt );
+bool crouch( double height, Hubo_Control &hubo, double dt );
 
 
 // Crane Stance Quasi-Statics
-bool placeSwingFoot( int side, Eigen::Vector3d footPose, Hubo_Tech &hubo, double dt );
+bool placeSwingFoot( int side, Eigen::Vector3d footPose, Hubo_Control &hubo, double dt );
 
