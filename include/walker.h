@@ -1,6 +1,6 @@
 #include <Hubo_Control.h>
 
-
+/*
 enum stance_t {
   DOUBLE_LEFT  = 0,
   DOUBLE_RIGHT = 1,
@@ -25,7 +25,7 @@ typedef struct zmp_traj {
 } zmp_traj_t;
 
 #define HUBO_CHAN_ZMP_TRAJ_NAME "hubo-zmp-traj"
-
+*/
 
 
 
