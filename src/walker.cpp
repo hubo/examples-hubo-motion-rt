@@ -6,16 +6,16 @@ ach_channel_t zmp_chan;
 
 
 
-const double nudgePGain = 0.002;
-const double nudgeIGain = 0.05;
-
+const double nudgePGain = 0.05;
+const double nudgeIGain = 0.70;
+const double nudgeDGain = 0.60;
 
 
 
 const double compRollGain = 0.0015;
 const double compPitchGain = 0.0015;
 const double shiftCompMultiplier = 1.0;
-const double craneCompMultiplier  = 1.0;
+const double craneCompMultiplier = 1.0;
 
 const double craneShiftGainX = 0.0015; // Crane stance resistance to torque
 const double craneShiftGainY = 0.0015; // Crane stance resistance to torque
@@ -30,7 +30,7 @@ const double swingVelLimit = 0.05;
 
 const double pitchAngleGain = 0.5*M_PI/180.0; // IMU feedback gain
 const double rollAngleGain = 0.3*M_PI/180.0; // IMU feedback gain
-const double craneAngleMultiplier = 0.1;
+const double craneAngleMultiplier = 1.0;
 
 const double shiftGain = 0.0002; // Shift-to-side gain
 const double shiftBalanceGain = 0.0015; // Gain to maintain balance while shifting
@@ -421,8 +421,13 @@ bool placeSwingFoot( int side, Eigen::Vector3d footPose, Hubo_Control &hubo, dou
 }
 
 void dualLegNudge( Hubo_Control &hubo, const zmp_traj_element_t &elem, 
-                    Vector6d &lqdot, Vector6d &rqdot, Eigen::Vector3d &verr, double dt )
+                      Vector6d &lqdot, Vector6d &rqdot,
+                      foot_state_t &state, double dt )
+//                    Eigen::Vector3d &vprev,
+//                    Eigen::Vector3d &verr, double dt )
 {
+    std::cout << "Dual Leg: ";
+
     Eigen::Isometry3d Br, Bl;
     Eigen::Vector3d ahat;
     Vector6d rangles, langles;
@@ -451,8 +456,11 @@ void dualLegNudge( Hubo_Control &hubo, const zmp_traj_element_t &elem,
 
     Ma = (Ml+Mr).dot(ahat)*ahat;
 
+    std::cout << "Ma:" << Ma.transpose();// << "\tMl:" << Ml.transpose() << "\tMr:" << Mr.transpose();
+
     vel = nudgePGain*( Ma.cross(Vector3d(0,0,1)) );
 
+//    std::cout << "V0:" << vel.transpose();
 
     // Prevent pushing past ankle roll limit
     Eigen::Vector3d fhaty;
@@ -477,8 +485,14 @@ void dualLegNudge( Hubo_Control &hubo, const zmp_traj_element_t &elem,
             && vel.dot(fhaty) < 0 )
         vel = vel - vel.dot(fhaty)*fhaty;
 
-    vel += nudgeIGain*verr;
-    verr += (vel - nudgeIGain*verr)*dt;
+//    std::cout << "\tV1:" << vel.transpose();
+
+    state.verr += vel*dt;
+    vel += nudgeIGain*state.verr;
+    vel -= nudgeDGain*(vel-state.vprev); 
+//    verr += (vel - nudgeIGain*verr)*dt;
+
+    std::cout << "\tV2:" << vel.transpose();
 
 
     hubo.hipVelocityIK( lqdot, vel, LEFT );
@@ -488,22 +502,28 @@ void dualLegNudge( Hubo_Control &hubo, const zmp_traj_element_t &elem,
     double refAngleX=0, refAngleY=0;
     // TODO: Calculate refAngleX and refAngleY from the desired IMU orientation
     
-    rqvel(AR) += craneAngleMultiplier*(rollAngleGain*hubo.getAngleX()-refAngleX)
+    state.rarerr += craneAngleMultiplier*(rollAngleGain*hubo.getAngleX()-refAngleX)
                 + craneCompMultiplier*(compRollGain*hubo.getRightFootMx()-elem.torque[RIGHT][0]);
-    rqvel(AP) += craneAngleMultiplier*(pitchAngleGain*hubo.getAngleY()-refAngleY)
+    rqdot(AR) += state.rarerr;
+    state.raperr += craneAngleMultiplier*(pitchAngleGain*hubo.getAngleY()-refAngleY)
                 + craneCompMultiplier*(compPitchGain*hubo.getRightFootMy()-elem.torque[RIGHT][1]);
+    rqdot(AP) += state.raperr;
 
-
-    lqvel(AR) += craneAngleMultiplier*(rollAngleGain*hubo.getAngleX()-refAngleX)
+    state.larerr += craneAngleMultiplier*(rollAngleGain*hubo.getAngleX()-refAngleX)
                 + craneCompMultiplier*(compRollGain*hubo.getLeftFootMx()-elem.torque[LEFT][0]);
-    lqvel(AP) += craneAngleMultiplier*(pitchAngleGain*hubo.getAngleY()-refAngleY)
+    lqdot(AR) += state.larerr;
+    state.laperr += craneAngleMultiplier*(pitchAngleGain*hubo.getAngleY()-refAngleY)
                 + craneCompMultiplier*(compPitchGain*hubo.getLeftFootMy()-elem.torque[LEFT][1]);
+    lqdot(AP) += state.laperr;
 
+    std::cout << "\trqdot:" << rqdot.transpose();
 }
 
 
-void singleLegNudge( Hubo_Control &hubo, const zmp_traj_element_t &elem, int side,
-                        Vector6d lqdot, Vector6d rqdot, Eigen::Vector3d &verr, double dt )
+void singleLegNudge( Hubo_Control &hubo, const zmp_traj_element_t &elem, int side, 
+                           Vector6d lqdot, Vector6d rqdot, foot_state_t &state, double dt )
+//                        Eigen::Vector3d &vprev,
+//                        Eigen::Vector3d &verr, double dt )
 {
     Eigen::Vector3d vel; vel.setZero();
     rqdot.setZero();
@@ -551,9 +571,9 @@ void singleLegNudge( Hubo_Control &hubo, const zmp_traj_element_t &elem, int sid
             || (hubo.getJointAngleState(LHR) + hubo.getJointAngleState(LAR) > 0.0
                 && hubo.getJointAngleState(LAR) > 0 && hubo.getJointAngleState(LHR) < 0) )
         {
-            lqvel(AR) = 0.0;
-            lqvel(HR) = craneHipRollGain*( -hubo.getLeftFootMx() );
-            rqvel(HR) += lqvel(HR);
+            lqdot(AR) = 0.0;
+            lqdot(HR) = craneHipRollGain*( -hubo.getLeftFootMx() );
+            rqdot(HR) += lqdot(HR);
         }
 
         if( elem.angles[RHR]+rqdot(HR) > elem.angles[LHR]+lqdot(HR) )
@@ -564,16 +584,18 @@ void singleLegNudge( Hubo_Control &hubo, const zmp_traj_element_t &elem, int sid
 }
 
 
-void nudgeRefs( Hubo_Control &hubo, zmp_traj_element_t &elem, Eigen::Vector3d &verr, double dt )
+void nudgeRefs( Hubo_Control &hubo, zmp_traj_element_t &elem, //Eigen::Vector3d &vprev,
+                            foot_state_t &state, double dt )
+//                Eigen::Vector3d &verr, double dt )
 {
     Vector6d lqdot, rqdot; lqdot.setZero(); rqdot.setZero();
 
     if( elem.stance == DOUBLE_LEFT || elem.stance == DOUBLE_RIGHT )
-        dualLegNudge( hubo, elem, lqdot, rqdot, verr, dt );
+        dualLegNudge( hubo, elem, lqdot, rqdot, state, dt );
     else if( elem.stance == SINGLE_LEFT )
-        singleLegNudge( hubo, elem, LEFT, lqdot, rqdot, verr, dt );
+        singleLegNudge( hubo, elem, LEFT, lqdot, rqdot, state, dt );
     else if( elem.stance == SINGLE_RIGHT )
-        singleLegNudge( hubo, elem, RIGHT, lqdot, rdqot, verr, dt );
+        singleLegNudge( hubo, elem, RIGHT, lqdot, rqdot, state, dt );
 
     for(int i=0; i < LEG_JOINT_COUNT; i++)
     {
@@ -586,7 +608,10 @@ void nudgeRefs( Hubo_Control &hubo, zmp_traj_element_t &elem, Eigen::Vector3d &v
 int main(int argc, char **argv)
 {
     Hubo_Control hubo;
-    Eigen::Vector3d verr; verr.setZero();
+    foot_state_t state;
+    memset( &state, 0, sizeof(foot_state_t) );
+//    Eigen::Vector3d verr; verr.setZero();
+//    Eigen::Vector3d vprev; vprev.setZero();
 
     ach_status_t r = ach_open( &zmp_chan, HUBO_CHAN_ZMP_TRAJ_NAME, NULL );
     fprintf( stderr, "%s (%d)\n", ach_result_to_string(r), (int)r );
@@ -621,16 +646,26 @@ int main(int argc, char **argv)
     hubo.sendControls();
 
     double dt, time, stime; stime=hubo.getTime(); time=hubo.getTime();
-    while( time - stime < 7 )
+//    while( time - stime < 7 )
+    while(true)
     {
         hubo.update(true);
-        dt = time - hubo.getTime();
+        dt = hubo.getTime() - time;
         time = hubo.getTime();
 
-        nudgeRefs( hubo, trajectory.traj[0], verr, dt );
+        zmp_traj_element_t init = trajectory.traj[0];
+        nudgeRefs( hubo, init, state, dt ); //vprev, verr, dt );
 
-        hubo.setJointAngleMin( LHR, trajectory.traj[0].angles[RHR] );
-        hubo.setJointAngleMax( RHR, trajectory.traj[0].angles[LHR] );
+        printf("B:%f\tA:%f\tD:%f\n", trajectory.traj[0].angles[RHP], init.angles[RHP],
+                                        init.angles[RHP]-trajectory.traj[0].angles[RHP] );
+
+        for(int i=0; i<HUBO_JOINT_COUNT; i++)
+            hubo.setJointAngle( i, init.angles[i] );
+        hubo.setJointAngle( RSR, init.angles[RSR] + hubo.getJointAngleMax(RSR) );
+        hubo.setJointAngle( LSR, init.angles[LSR] + hubo.getJointAngleMin(LSR) );
+
+        hubo.setJointAngleMin( LHR, init.angles[RHR] );
+        hubo.setJointAngleMax( RHR, init.angles[LHR] );
         hubo.sendControls();
     }
 

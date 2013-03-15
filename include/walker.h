@@ -28,6 +28,21 @@ typedef struct zmp_traj {
 */
 
 
+typedef struct foot_state {
+    Eigen::Vector3d vprev;
+    Eigen::Vector3d verr;
+    double larerr;
+    double laperr;
+    double rarerr;
+    double raperr;
+} foot_state_t;
+
+
+
+
+
+
+
 
 const double hipDistance = 0.08843*2.0; // Distance between hip joints
 
@@ -92,7 +107,6 @@ protected:
 
 
 };
-
 
 
 
