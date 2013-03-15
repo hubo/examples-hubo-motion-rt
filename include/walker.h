@@ -1,34 +1,8 @@
 #include <Hubo_Control.h>
 
-/*
-enum stance_t {
-  DOUBLE_LEFT  = 0,
-  DOUBLE_RIGHT = 1,
-  SINGLE_LEFT  = 2,
-  SINGLE_RIGHT = 3,
-};
-
-typedef struct zmp_traj_element {
-  double angles[HUBO_JOINT_COUNT];
-  double com[3][3]; // XYZ pos/vel/accel in frame of stance foot
-  stance_t stance;
-} zmp_traj_element_t;
-
-enum {
-  TRAJ_FREQ_HZ = 200,
-  MAX_TRAJ_SIZE = 2000,
-};
-
-typedef struct zmp_traj {
-  zmp_traj_element_t traj[MAX_TRAJ_SIZE];
-  size_t count;
-} zmp_traj_t;
-
-#define HUBO_CHAN_ZMP_TRAJ_NAME "hubo-zmp-traj"
-*/
 
 
-typedef struct foot_state {
+typedef struct nudge_state {
 
     Eigen::Vector3d vprev;
     Eigen::Vector3d verr;
@@ -36,14 +10,14 @@ typedef struct foot_state {
 
     Eigen::Vector3d nudge;
     Eigen::Vector3d spin;
-    double larerr;
-    double laperr;
+    double larerr; // Left Ankle Roll compliance
+    double laperr; // Left Ankle Pitch compliance
     double rarerr;
     double raperr;
 
     Eigen::Vector3d imu_offset;
     
-} foot_state_t;
+} nudge_state_t;
 
 
 
