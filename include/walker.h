@@ -32,10 +32,16 @@ typedef struct foot_state {
 
     Eigen::Vector3d vprev;
     Eigen::Vector3d verr;
+
+
+    Eigen::Vector3d nudge;
+    Eigen::Vector3d spin;
     double larerr;
     double laperr;
     double rarerr;
     double raperr;
+
+    Eigen::Vector3d imu_offset;
     
 } foot_state_t;
 
