@@ -6,9 +6,9 @@ ach_channel_t zmp_chan;
 
 
 
-const double nudgePGain = 0.05;
+const double nudgePGain = 0.04;
 const double nudgeIGain = 0.70;
-const double nudgeDGain = 0.60;
+const double nudgeDGain = 0.80;
 
 
 
@@ -529,26 +529,37 @@ void singleLegNudge( Hubo_Control &hubo, const zmp_traj_element_t &elem, int sid
     rqdot.setZero();
     lqdot.setZero();
 
+    double refAngleX=0, refAngleY=0;
+    // TODO: Calculate refAngleX and refAngleY from the desired IMU orientation
+
     if( side == RIGHT )
     {
         vel(0) =  craneShiftGainX*( hubo.getRightFootMy() - elem.torque[RIGHT][1] );
         vel(1) = -craneShiftGainY*( hubo.getRightFootMx() - elem.torque[RIGHT][0] );
 
+        state.verr += vel*dt;
+        vel += nudgeIGain*state.verr;
+        vel -= nudgeDGain*(vel-state.vprev); 
+
         hubo.hipVelocityIK( rqdot, vel, RIGHT );
-
-        rqdot(AR) += craneAngleMultiplier*rollAngleGain*hubo.getAngleX() 
-                    + craneCompMultiplier*compRollGain*hubo.getRightFootMx();
-        rqdot(AP) += craneAngleMultiplier*pitchAngleGain*hubo.getAngleY()
-                    + craneCompMultiplier*compPitchGain*hubo.getRightFootMy();
-
+        
+        state.rarerr += craneAngleMultiplier*(rollAngleGain*hubo.getAngleX()-refAngleX)
+                    + craneCompMultiplier*(compRollGain*hubo.getRightFootMx()-elem.torque[RIGHT][0]);
+        rqdot(AR) += state.rarerr;
+        state.raperr += craneAngleMultiplier*(pitchAngleGain*hubo.getAngleY()-refAngleY)
+                    + craneCompMultiplier*(compPitchGain*hubo.getRightFootMy()-elem.torque[RIGHT][1]);
+        rqdot(AP) += state.raperr;
 
         if(    hubo.getJointAngle(RAR) <= hubo.getJointAngleMin(RAR)+craneAnkleRollThresh
             || (hubo.getJointAngleState(RHR) + hubo.getJointAngleState(RAR) < 0.0
                 && hubo.getJointAngleState(RAR) < 0 && hubo.getJointAngleState(RHR) > 0) )
         {
             rqdot(AR) = 0.0;
-            rqdot(HR) = craneHipRollGain*( -hubo.getRightFootMx() );
-            lqdot(HR) += rqdot(HR);
+            rqdot(HR) = craneHipRollGain/craneShiftGainY*
+                            (vel(1)*cos(hubo.getJointAngleState(RHY))
+                            -vel(0)*sin(hubo.getJointAngleState(RHY)));
+            lqdot(HR) +=  rqdot(HR)*cos(hubo.getJointAngleState(LHY)-hubo.getJointAngleState(RHY));
+            lqdot(HP) += -rqdot(HR)*sin(hubo.getJointAngleState(LHY)-hubo.getJointAngleState(RHY));
         }
 
         if( elem.angles[RHR]+rqdot(HR) > elem.angles[LHR]+lqdot(HR) )
@@ -558,13 +569,19 @@ void singleLegNudge( Hubo_Control &hubo, const zmp_traj_element_t &elem, int sid
     {
         vel(0) =  craneShiftGainX*( hubo.getLeftFootMy() - elem.torque[LEFT][1] );
         vel(1) = -craneShiftGainY*( hubo.getLeftFootMx() - elem.torque[LEFT][0] );
+        
+        state.verr += vel*dt;
+        vel += nudgeIGain*state.verr;
+        vel -= nudgeDGain*(vel-state.vprev); 
 
         hubo.hipVelocityIK( lqdot, vel, LEFT );
 
-        lqdot(AR) += craneAngleMultiplier*rollAngleGain*hubo.getAngleX() 
-                    + craneCompMultiplier*compRollGain*hubo.getLeftFootMx();
-        lqdot(AP) += craneAngleMultiplier*pitchAngleGain*hubo.getAngleY()
-                    + craneCompMultiplier*compPitchGain*hubo.getLeftFootMy();
+        state.larerr += craneAngleMultiplier*(rollAngleGain*hubo.getAngleX()-refAngleX)
+                    + craneCompMultiplier*(compRollGain*hubo.getLeftFootMx()-elem.torque[LEFT][0]);
+        lqdot(AR) += state.larerr;
+        state.laperr += craneAngleMultiplier*(pitchAngleGain*hubo.getAngleY()-refAngleY)
+                    + craneCompMultiplier*(compPitchGain*hubo.getLeftFootMy()-elem.torque[LEFT][1]);
+        lqdot(AP) += state.laperr;
 
 
         if(    hubo.getJointAngle(LAR) >= hubo.getJointAngleMax(LAR)-craneAnkleRollThresh
@@ -572,8 +589,11 @@ void singleLegNudge( Hubo_Control &hubo, const zmp_traj_element_t &elem, int sid
                 && hubo.getJointAngleState(LAR) > 0 && hubo.getJointAngleState(LHR) < 0) )
         {
             lqdot(AR) = 0.0;
-            lqdot(HR) = craneHipRollGain*( -hubo.getLeftFootMx() );
-            rqdot(HR) += lqdot(HR);
+            lqdot(HR) = craneHipRollGain/craneShiftGainY*
+                            (vel(1)*cos(hubo.getJointAngleState(LHY))
+                            -vel(0)*sin(hubo.getJointAngleState(LHY)));
+            rqdot(HR) +=  lqdot(HR)*cos(hubo.getJointAngleState(RHY)-hubo.getJointAngleState(LHY));
+            rqdot(HP) += -lqdot(HR)*sin(hubo.getJointAngleState(RHY)-hubo.getJointAngleState(LHY));
         }
 
         if( elem.angles[RHR]+rqdot(HR) > elem.angles[LHR]+lqdot(HR) )
