@@ -18,18 +18,28 @@ const double nudgeDGain = 0.0;
 
 
 // gain for ankle flat
-const double k_tau = 0.0015; // Grey likes this value
+const double k_tau = 0.0010; // Grey likes this value
 
 // gain for moment reducing
-const double k_pos = 0.0015; // Crane stance resistance to torque
+const double k_pos = 0.0030; // Crane stance resistance to torque
 
 // gain for IMU rotation
-const double k_theta = 0; //0.5*M_PI/180.0; // IMU feedback gain
+const double k_theta_x = 0;
+const double k_theta_y = 0.5*M_PI/180.0; // IMU feedback gain
 
 const double weight_thresh_N = -1e5; // TESTING k_tau 30; // weight to turn on/off integrators
 const double nudge_max_norm = 0.05; // m
-const double spin_max_angle = 10 * M_PI/180;
+const double spin_max_angle = 30 * M_PI/180;
 const double comp_max_angle = 30 * M_PI/180;
+
+const double tau_dead_band = 1;
+
+
+const double fzMin = 10;
+const double fzMax = 50;
+
+const double flatteningGain = 0.02;
+
 
 //const double compPitchGain = 0.0015;
 //const double shiftCompMultiplier = 1.0;
@@ -62,6 +72,18 @@ const double comp_max_angle = 30 * M_PI/180;
 //const double calKneeGain = 1.0;
 //const double calWeightGain = 0.001; // rad/sec per N
 
+double applyDeadband( double x ) {
+
+  if (x > tau_dead_band) {
+    return x - tau_dead_band;
+  } else if (x < -tau_dead_band) {
+    return x + tau_dead_band;
+  } else {
+    return 0;
+  }
+
+}
+
 
 void getLegNudge( Hubo_Control &hubo, Vector6d q, 
 		  zmp_traj_element_t elem, nudge_state_t &state, 
@@ -72,34 +94,57 @@ void getLegNudge( Hubo_Control &hubo, Vector6d q,
     double refAngleX=0, refAngleY=0;
     // TODO: Calculate desired IMU angle
 
-    Eigen::Matrix3d R = Eigen::AngleAxisd(q(HY), Vector3d::UnitZ()).toRotationMatrix();
+    Eigen::Matrix3d R = ( Eigen::AngleAxisd(q(HY), Vector3d::UnitZ()) *
+			  Eigen::AngleAxisd(q(HR), Vector3d::UnitX()) *
+			  Eigen::AngleAxisd(q(HP), Vector3d::UnitY()) *
+			  Eigen::AngleAxisd(q(KN), Vector3d::UnitY()) *
+			  Eigen::AngleAxisd(q(AP), Vector3d::UnitY()) *
+			  Eigen::AngleAxisd(q(AR), Vector3d::UnitX()) ).toRotationMatrix();
+
+    /*
+    std::cout << "left MX: " << hubo.getLeftFootMx() << ", "
+	      << "desired: " << elem.torque[LEFT][0] << ", "
+	      << "diff: " << (hubo.getLeftFootMx() - elem.torque[LEFT][0]) << "\n";
+
+    std::cout << "left MY: " << hubo.getLeftFootMy() << ", "
+	      << "desired: " << elem.torque[LEFT][1] << ", "
+	      << "diff: " << (hubo.getLeftFootMy() - elem.torque[LEFT][1]) << "\n";
+
+    std::cout << "right MX: " << hubo.getRightFootMx() << ", "
+	      << "desired: " << elem.torque[RIGHT][0] << ", "
+	      << "diff: " << (hubo.getRightFootMx() - elem.torque[RIGHT][0]) << "\n";
+
+    std::cout << "right MY: " << hubo.getRightFootMy() << ", "
+	      << "desired: " << elem.torque[RIGHT][1] << ", "
+	      << "diff: " << (hubo.getRightFootMy() - elem.torque[RIGHT][1]) << "\n\n";
+    */
 
     if( side==RIGHT )
     {
-        vel(0) =  k_pos*( hubo.getRightFootMy() - elem.torque[RIGHT][1] );
-        vel(1) = -k_pos*( hubo.getRightFootMx() - elem.torque[RIGHT][0] );
+      vel(0) =  k_pos*applyDeadband( hubo.getRightFootMy() - elem.torque[RIGHT][1] );
+      vel(1) = -k_pos*applyDeadband( hubo.getRightFootMx() - elem.torque[RIGHT][0] );
 
 
         state.nudge += R*vel*dt;
 
-        state.spin(0) += dt*k_theta*(hubo.getAngleX()-refAngleX);//-state.imu_offset(0));
-        state.spin(1) += dt*k_theta*(hubo.getAngleY()-refAngleY);//-state.imu_offset(0));
+        state.spin(0) += dt*k_theta_x*(hubo.getAngleX()-refAngleX);//-state.imu_offset(0));
+        state.spin(1) += dt*k_theta_y*(hubo.getAngleY()-refAngleY);//-state.imu_offset(0));
 
-        state.rarerr += dt*k_tau*( hubo.getRightFootMx()-elem.torque[RIGHT][0] );
-        state.raperr += dt*k_tau*( hubo.getRightFootMy()-elem.torque[RIGHT][1] );
+        state.rarerr += dt*k_tau*( hubo.getRightFootMx() );
+        state.raperr += dt*k_tau*( hubo.getRightFootMy() );
     }
     else
     {
-        vel(0) =  k_pos*( hubo.getLeftFootMy() - elem.torque[LEFT][1] );
-        vel(1) = -k_pos*( hubo.getLeftFootMx() - elem.torque[LEFT][0] );
+        vel(0) =  k_pos*applyDeadband( hubo.getLeftFootMy() - elem.torque[LEFT][1] );
+        vel(1) = -k_pos*applyDeadband( hubo.getLeftFootMx() - elem.torque[LEFT][0] );
 
         state.nudge += R*vel*dt;
 
-        state.spin(0) += dt*k_theta*(hubo.getAngleX()-refAngleX);//-state.imu_offset(0));
-        state.spin(1) += dt*k_theta*(hubo.getAngleY()-refAngleY);//-state.imu_offset(0));
+        state.spin(0) += dt*k_theta_x*(hubo.getAngleX()-refAngleX);//-state.imu_offset(0));
+        state.spin(1) += dt*k_theta_y*(hubo.getAngleY()-refAngleY);//-state.imu_offset(0));
 
-        state.larerr += dt*k_tau*( hubo.getLeftFootMx()-elem.torque[LEFT][0] );
-        state.laperr += dt*k_tau*( hubo.getLeftFootMy()-elem.torque[LEFT][1] );
+        state.larerr += dt*k_tau*( hubo.getLeftFootMx() );
+        state.laperr += dt*k_tau*( hubo.getLeftFootMy() );
     }
 
 
@@ -159,22 +204,26 @@ void integrateNudgeIK( Hubo_Control &hubo, Vector6d &qr, Vector6d& ql,
 	Eigen::AngleAxisd(state.spin[0], Eigen::Vector3d::UnitX()) *
 	Eigen::AngleAxisd(state.spin[1], Eigen::Vector3d::UnitY());
 
+      /*
       std::cout << "nudge for leg " << side << " is " << p.transpose() << "\n";
       std::cout << "spin for leg " << side << " is " << state.spin.transpose() << "\n";
+      */
 
       Eigen::Isometry3d Tdelta;
       Tdelta.setIdentity();
       Tdelta.rotate(R);
       Tdelta.pretranslate(p);
-
+      
+      /*
       std::cout << "Tdelta for leg " << side << "=\n" << Tdelta.matrix() << "\n";
       Eigen::Isometry3d desired = Tdelta * FK;
+      */
 
-      //Eigen::Isometry3d desired = FK;
+      Eigen::Isometry3d desired = FK;
 
       hkin.legIK(qs, desired, qs_prev, side);
 
-      std::cout << "Diff for leg " << side << " is " << (qs_prev - qs).transpose() << "\n";
+      //std::cout << "Diff for leg " << side << " is " << (qs_prev - qs).transpose() << "\n";
 
 
     }
@@ -334,7 +383,13 @@ void nudgeRefs( Hubo_Control &hubo, zmp_traj_element_t &elem, //Eigen::Vector3d 
   }
 
 
-  std::cout << "Nudge: " << state.nudge.transpose() << "\tSpin: " << state.spin.transpose();
+  std::cout << "Nudge: " << state.nudge.transpose() << "\tSpin: " << state.spin.transpose() << "\n";
+  std::cout << "Offsets: " 
+	    << state.raperr << ", " 
+	    << state.rarerr << ", " 
+	    << state.laperr << ", " 
+	    << state.larerr << "\n";
+
   integrateNudgeIK( hubo, qr, ql, state, elem, dt, hkin );
 
         
@@ -353,6 +408,41 @@ void nudgeRefs( Hubo_Control &hubo, zmp_traj_element_t &elem, //Eigen::Vector3d 
   elem.angles[LAR] = ql(AR);
 
 }
+
+
+
+
+void flattenFoot( Hubo_Control &hubo, zmp_traj_element_t &elem, nudge_state_t &state, double dt )
+{
+    
+    std::cout << "RFz:" << hubo.getRightFootFz() << "RAP:" << state.raperr << "\tLFz:" << hubo.getLeftFootFz() << "\tLAP:" << state.laperr << std::endl;
+
+    if( fzMin < hubo.getRightFootFz() && hubo.getRightFootFz() < fzMax )
+    {
+        std::cout << "Flattening Right Foot" << std::endl;
+        state.rarerr += dt*flatteningGain*( hubo.getRightFootMx() );
+        state.raperr += dt*flatteningGain*( hubo.getRightFootMy() );
+    }
+
+    if( fzMin < hubo.getLeftFootFz() && hubo.getLeftFootFz() < fzMax )
+    {
+        std::cout<< "Flattening Left Foot" << std::endl;
+        state.larerr += dt*flatteningGain*( hubo.getLeftFootMx() );
+        state.laperr += dt*flatteningGain*( hubo.getLeftFootMy() );
+    }
+
+    elem.angles[RAR] += state.rarerr;
+    elem.angles[RAP] += state.raperr;
+    elem.angles[LAR] += state.larerr;
+    elem.angles[LAP] += state.laperr;
+
+}
+
+
+
+
+
+
 
 
 int main(int argc, char **argv)
@@ -400,7 +490,11 @@ int main(int argc, char **argv)
 
     hubo.sendControls();
 
+    
     double dt, time, stime; stime=hubo.getTime(); time=hubo.getTime();
+
+
+/*
 //    while( time - stime < 7 )
     while(true)
     {
@@ -411,12 +505,8 @@ int main(int argc, char **argv)
         zmp_traj_element_t init = trajectory.traj[0];
         init.forces[0][2] = 200; init.forces[1][2] = 200;
 
-        nudgeRefs( hubo, init, state, dt, hkin ); //vprev, verr, dt );
-
-        std::cout << hubo.getRightFootMy() + hubo.getLeftFootMy() << std::endl;
-
-//        printf("B:%f\tA:%f\tD:%f\n", trajectory.traj[0].angles[RHP], init.angles[RHP],
-//                                        init.angles[RHP]-trajectory.traj[0].angles[RHP] );
+        flattenFoot( hubo, init, state, dt );
+//        nudgeRefs( hubo, init, state, dt, hkin ); //vprev, verr, dt );
 
         for(int i=0; i<HUBO_JOINT_COUNT; i++)
             hubo.setJointAngle( i, init.angles[i] );
@@ -429,17 +519,30 @@ int main(int argc, char **argv)
     }
 
     printf("Time elapsed\n");
+  */  
 
 
 
 
 
 
-/*
-    fprintf(stdout, "%d\n", trajectory.count);
+
+    while( time - stime < 3 ) {
+      hubo.update(true);
+      time = hubo.getTime();
+    }
+
+
+    fprintf(stdout, "%d\n", (int)trajectory.count);
     for(int t=1; t<trajectory.count-1; t++)
     {
+
         hubo.update(true);
+        dt = hubo.getTime() - time;
+        time = hubo.getTime();
+
+        flattenFoot( hubo, trajectory.traj[t], state, dt );
+        //nudgeRefs( hubo, trajectory.traj[t], state, dt, hkin ); //vprev, verr, dt );
         for(int i=0; i<HUBO_JOINT_COUNT; i++)
         {
             hubo.setJointAngle( i, trajectory.traj[t].angles[i] );
@@ -449,7 +552,6 @@ int main(int argc, char **argv)
                                 trajectory.traj[t-1].angles[i]
                             - 2*trajectory.traj[t].angles[i]
                             +   trajectory.traj[t+1].angles[i] );
-            if( i==RHR ) fprintf( stdout, "RHR Accel: %f\n", accel );
             hubo.setJointNominalAcceleration( i, 10*accel );
         }
 
@@ -460,7 +562,7 @@ int main(int argc, char **argv)
         hubo.setJointAngleMax( RHR, trajectory.traj[t].angles[LHR] );
         hubo.sendControls();
     }
-*/
+
 
 
 
