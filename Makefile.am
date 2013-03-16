@@ -24,6 +24,6 @@ ctrl_trajectory_sample_LDADD = $(ctrllibs)
 ctrl_request_ik_SOURCES = src/ctrl-request-ik.cpp
 ctrl_request_ik_LDADD = $(ctrllibs)
 
-walker_SOURCES = src/walker.cpp src/balance-monitor.cpp
+walker_SOURCES = src/walker.cpp src/balance-monitor.cpp src/HuboKin.cpp
 walker_LDADD = $(ctrllibs)
 
