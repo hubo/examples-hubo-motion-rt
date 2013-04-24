@@ -1,4 +1,4 @@
-#ifdef TRAJRUN_H
+#ifndef TRAJRUN_H
 #define TRAJRUN_H
 
 #include <hubo.h>
@@ -27,7 +27,7 @@ typedef struct hubo_traj {
     double endTime;
     int trajID;
 
-}
+} __attribute__((packed)) hubo_traj_t;
 
 
 typedef enum {

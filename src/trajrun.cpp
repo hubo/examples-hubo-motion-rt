@@ -1,4 +1,4 @@
-#include <Hubo_Control>
+#include <Hubo_Control.h>
 #include "trajrun.h"
 
 ach_channel_t traj_chan;
@@ -12,12 +12,12 @@ int main( int argc, char **argv )
     Vector6d rArmSpeedDef, lArmSpeedDef,
              rLegSpeedDef, lLegSpeedDef,
              rArmAccDef,   lArmAccDef,
-             rLegAccDef,   lArmAccDef;
+             rLegAccDef,   lLegAccDef;
 
-    hubo.getArmNomSpeed( RIGHT, rArmSpeedDef );
-    hubo.getArmNomSpeed( LEFT, lArmSpeedDef );
-    hubo.getLegNomSpeed( RIGHT, rLegSpeedDef );
-    hubo.getLegNomSpeed( LEFT, lLegSpeedDef );
+    hubo.getArmNomSpeeds( RIGHT, rArmSpeedDef );
+    hubo.getArmNomSpeeds( LEFT, lArmSpeedDef );
+    hubo.getLegNomSpeeds( RIGHT, rLegSpeedDef );
+    hubo.getLegNomSpeeds( LEFT, lLegSpeedDef );
 
     hubo.getArmNomAcc( RIGHT, rArmAccDef );
     hubo.getArmNomAcc( LEFT, lArmAccDef );
@@ -30,10 +30,10 @@ int main( int argc, char **argv )
     ach_open( &traj_chan, HUBO_TRAJ_CHAN, NULL );
     ach_open( &traj_state_chan, HUBO_TRAJ_STATE_CHAN, NULL );
     
-    while( !sig_daemon_quit )
+    while( !daemon_sig_quit )
     {
         size_t fs;
-        ach_result_t r;
+        ach_status_t r;
         r = ach_get( &traj_chan, &traj, sizeof(traj), &fs, NULL, ACH_O_WAIT );
         if( ACH_OK != r )
             fprintf(stderr, "Warning: (%d) %s\n", (int)r, ach_result_to_string(r) );
@@ -73,10 +73,10 @@ int main( int argc, char **argv )
     }
 
 
-    hubo.setArmNomSpeed( RIGHT, rArmSpeedDef );
-    hubo.setArmNomSpeed( LEFT, lArmSpeedDef );
-    hubo.setLegNomSpeed( RIGHT, rLegSpeedDef );
-    hubo.setLegNomSpeed( LEFT, lLegSpeedDef );
+    hubo.setArmNomSpeeds( RIGHT, rArmSpeedDef );
+    hubo.setArmNomSpeeds( LEFT, lArmSpeedDef );
+    hubo.setLegNomSpeeds( RIGHT, rLegSpeedDef );
+    hubo.setLegNomSpeeds( LEFT, lLegSpeedDef );
 
     hubo.setArmNomAcc( RIGHT, rArmAccDef );
     hubo.setArmNomAcc( LEFT, lArmAccDef );
