@@ -9,14 +9,14 @@ int main( int argc, char **argv )
     Hubo_Control hubo;
 
     std::vector<ArmVector, Eigen::aligned_allocator<ArmVector> > angles(5); // This declares "angles" as a dynamic array of ArmVectors with a starting array length of 5
-    angles[0] <<   0.0556916,   0.577126,  0.0816814,  -0.492327, 0, 0, 0, 0, 0, 0;
-    angles[1] <<  -1.07878,  0.408266, -0.477742, -0.665062, 0, 0, 0, 0, 0, 0;
-    angles[2] <<   -1.17367, -0.0540511,  -0.772141,  -0.503859, 0, 0, 0, 0, 0, 0;
-    angles[3] <<  -0.518417,   0.172191,  -0.566084, -0.0727671, 0, 0, 0, 0, 0, 0;
-    angles[4] << 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
+    angles[0] <<   0.0556916,   0.577126,  0.0816814,  -0.1, 0, 0, 0, 0, 0, 0;
+    angles[1] <<  -1.07878,  0.408266, -0.477742, -0.1, 0, 0, 0, 0, 0, 0;
+    angles[2] <<   -1.17367, -0.0540511,  -0.772141,  -0.3, 0, 0, 0, 0, 0, 0;
+    angles[3] <<  -0.518417,   0.172191,  -0.566084, -0.3, 0, 0, 0, 0, 0, 0;
+    angles[4] << 0, 0, 0, -0.1, 0, 0, 0, 0, 0, 0;
     // Obviously we could easily set up some code which reads in these values out of a pre-recorded file
     ArmVector currentPosition;  // This ArmVector will be used to track our current angle configuration
-
+/*
     ArmVector rangles;
     ArmVector accel, speeds;
     accel.setOnes(); accel *= 1.0;
@@ -26,7 +26,7 @@ int main( int argc, char **argv )
     hubo.setRightArmNomAcc( accel );
     hubo.setLeftArmNomSpeeds( speeds );
     hubo.setRightArmNomSpeeds( speeds );
-    
+*/    
     double tol = 0.075; // This will be the allowed tolerance before moving to the next point
     int traj = 0; // This will keep track of our current target on the trajectory
     while( true )
