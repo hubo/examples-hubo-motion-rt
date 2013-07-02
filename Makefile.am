@@ -4,7 +4,7 @@ AM_CPPFLAGS = -I$(top_srcdir)/include -L/usr/local/lib
 ctrllibs = -lm -lach -lc -lhuboctrl -ldaemonizer -lrt -lhuboparams
 
 # List the binary files you want to generate:
-bin_PROGRAMS = ctrl-sample ctrl-arm-sample ctrl-trajectory-sample ctrl-request-ik walker
+bin_PROGRAMS = ctrl-sample ctrl-arm-sample ctrl-trajectory-sample
 
 
 # For each one, list the .cpp sources:
@@ -20,10 +20,4 @@ ctrl_arm_sample_LDADD = $(ctrllibs)
 ctrl_trajectory_sample_SOURCES = src/ctrl-trajectory-sample.cpp
 ctrl_trajectory_sample_LDADD = $(ctrllibs)
 
-
-ctrl_request_ik_SOURCES = src/ctrl-request-ik.cpp
-ctrl_request_ik_LDADD = $(ctrllibs)
-
-walker_SOURCES = src/walker.cpp src/balance-monitor.cpp src/HuboKin.cpp
-walker_LDADD = $(ctrllibs)
 
