@@ -11,7 +11,8 @@ double* getArf(char* s);
 void printDoubleArray (double array[]);
 void gotoFirstPosition(double referenceData[], Hubo_Control &hubo);
 void gotoNewPosition(double referenceData[], double bufferedData[], int resample_ratio, Hubo_Control &hubo);
-int number_of_joints=40; //because the file has 40 elements
+double* interpolate_linear (double referenceData[], double bufferedData[], double multiplier);
+#define number_of_joints 40 //because the file has 40 elements
 
 double* getArg(char* s) {
 
@@ -79,7 +80,7 @@ void gotoFirstPosition(double referenceData[], Hubo_Control &hubo){
     left_arm_angles<< referenceData[LSP], referenceData[LSR], referenceData[LSY], referenceData[LEB], referenceData[LWY], referenceData[LWP], referenceData[LWR];
     right_arm_angles<< referenceData[RSP], referenceData[RSR], referenceData[RSY], referenceData[REB], referenceData[RWY], referenceData[RWP], referenceData[RWR];
     
-    right_leg_angles<< referenceData[RHY], referenceData[RHR], referenceData[RHP], referenceDat[RKN], referenceData[RAP], referenceData[RAR];
+    right_leg_angles<< referenceData[RHY], referenceData[RHR], referenceData[RHP], referenceData[RKN], referenceData[RAP], referenceData[RAR];
     left_leg_angles<< referenceData[LHY], referenceData[LHR], referenceData[LHP], referenceData[LKN], referenceData[LAP], referenceData[LAR];
 
     bool left_arm_in_limit=false;
@@ -134,9 +135,9 @@ void gotoNewPosition(double referenceData[], double bufferedData[], int resample
     ArmVector  left_leg_angles; // This declares "angles" as a dynamic array of ArmVectors with a starting array length of 5 
     ArmVector  right_leg_angles; // This declares "angles" as a dynamic array of ArmVectors with a starting array length of 5 
 
-    double interpolatedData= new double[number_of_joints];
+    double* interpolatedData= new double[number_of_joints];
 
-    int joint_array = new int[number_of_joints];
+    int* joint_array = new int[number_of_joints];
         joint_array[0]=RHY;   
         joint_array[1]=RHR;   
         joint_array[2]=RHP;   
@@ -178,10 +179,10 @@ void gotoNewPosition(double referenceData[], double bufferedData[], int resample
        	joint_array[38]=LF4;  
        	joint_array[39]=LF5;    
     	
-     for (int iterator=1; iterator<=resample_ratio, iterator++){
+     for (int iterator=1; iterator<=resample_ratio; iterator++){
 
 	    double multiplier = (double)iterator/(double)resample_ratio;
-	    interpolateData = interpolate_linear(referenceData, bufferedData,); 
+	    interpolatedData = interpolate_linear(referenceData, bufferedData, multiplier); 
 
 	    left_arm_angles<< interpolatedData[LSP], interpolatedData[LSR], interpolatedData[LSY], interpolatedData[LEB], interpolatedData[LWY], interpolatedData[LWP], interpolatedData[LWR];
 	    right_arm_angles<< interpolatedData[RSP], interpolatedData[RSR], interpolatedData[RSY], interpolatedData[REB], interpolatedData[RWY], interpolatedData[RWP], interpolatedData[RWR];
@@ -192,18 +193,20 @@ void gotoNewPosition(double referenceData[], double bufferedData[], int resample
 	    hubo.update(true);
 
     	for (int joint=0; joint<number_of_joints; joint++){
- 		hubo.passJointAngles(joint_array[joint], interpolatedData[joint]);
+ 		hubo.passJointAngle(joint_array[joint], interpolatedData[joint]);
+		printf("%d    ->    %lf", joint_array[joint], interpolatedData[joint]);
     	} 
    	hubo.sendControls(); // This will send off all the latest control commands over ACH
  
     }// end of iterator loop
 }
 
-double[] interpolate_linear (double referenceData[], double bufferedData[], double multiplier){
-	double interpolatedData = new double[number_of_joints];
+double* interpolate_linear (double referenceData[], double bufferedData[], double multiplier){
+	double* interpolatedData = new double[number_of_joints];
 	for (int joint=0; joint<number_of_joints; joint++){
 		interpolatedData[joint]=bufferedData[joint]+(referenceData[joint]-bufferedData[joint])*multiplier;
 	}
+	return interpolatedData;
 }
 
 int main() {
@@ -230,13 +233,13 @@ int main() {
 		//printDoubleArray(referenceData);
 		if (first_line==true){
 			// goto first position
-			gotoFirstPosition(referenceData, hubo);
+			//gotoFirstPosition(referenceData, hubo);
 			bufferedData=referenceData;
 			first_line=false;
 		}	
 		else{
 			//normal trajectory following
-			gotoNewPosition(referenceData, bufferedData, resample_ration, hubo);
+			gotoNewPosition(referenceData, bufferedData, resample_ratio, hubo);
 		}
 	}
 	fclose(fp);
