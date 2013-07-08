@@ -13,7 +13,8 @@ void gotoFirstPosition(double referenceData[], Hubo_Control &hubo);
 void gotoNewPosition(double referenceData[], double bufferedData[], int resample_ratio, Hubo_Control &hubo, FILE * resultFile);
 double* interpolate_linear (double referenceData[], double bufferedData[], double multiplier);
 #define number_of_joints 40 //because the file has 40 elements
-
+bool checkTrajectory (double nextPosition[], double currentPosition[]);
+ 
 double* getArg(char* s) {
 
 	double *r= new double[number_of_joints];
@@ -231,7 +232,7 @@ bool checkTrajectory (double nextPosition[], double currentPosition[]){
 
 
 
-int main() {
+int main(int argc, char *argv[]) {
     	printf("starting the follow trajectory \n");
 	Hubo_Control hubo;
 	
@@ -245,7 +246,16 @@ int main() {
 	int input_file_frequency=25;
 	int resample_ratio=frequency/input_file_frequency;
 	int line_counter=0;
-
+/*
+	if (argc>0){
+	//	filename=argv[0];
+		printf("file is  %c \n",argv[0]);
+	}
+	if (argc>1){
+	//	input_file_frequency=atoi(argv[1]);
+		printf(" input freq is  %d  \n",atoi(argv[1])); 
+	}
+*/
 	fp = fopen(filename,"r");
         if(!fp) {
                 printf("No Trajectory File!!!\n");
