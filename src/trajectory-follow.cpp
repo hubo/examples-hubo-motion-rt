@@ -10,7 +10,7 @@ using namespace std;
 double* getArf(char* s);
 void printDoubleArray (double array[]);
 void gotoFirstPosition(double referenceData[], Hubo_Control &hubo);
-void gotoNewPosition(double referenceData[], double bufferedData[], int resample_ratio, Hubo_Control &hubo);
+void gotoNewPosition(double referenceData[], double bufferedData[], int resample_ratio, Hubo_Control &hubo, FILE * resultFile);
 double* interpolate_linear (double referenceData[], double bufferedData[], double multiplier);
 #define number_of_joints 40 //because the file has 40 elements
 
@@ -77,11 +77,11 @@ void gotoFirstPosition(double referenceData[], Hubo_Control &hubo){
     ArmVector  left_leg_angles; // This declares "angles" as a dynamic array of ArmVectors with a starting array length of 5 
     ArmVector  right_leg_angles; // This declares "angles" as a dynamic array of ArmVectors with a starting array length of 5 
 
-    left_arm_angles<< referenceData[LSP], referenceData[LSR], referenceData[LSY], referenceData[LEB], referenceData[LWY], referenceData[LWP], referenceData[LWR];
-    right_arm_angles<< referenceData[RSP], referenceData[RSR], referenceData[RSY], referenceData[REB], referenceData[RWY], referenceData[RWP], referenceData[RWR];
+    left_arm_angles<< referenceData[LSP], referenceData[LSR], referenceData[LSY], referenceData[LEB], referenceData[LWY], referenceData[LWP], referenceData[LWR], 0,0,0;
+    right_arm_angles<< referenceData[RSP], referenceData[RSR], referenceData[RSY], referenceData[REB], referenceData[RWY], referenceData[RWP], referenceData[RWR],0,0,0;
     
-    right_leg_angles<< referenceData[RHY], referenceData[RHR], referenceData[RHP], referenceData[RKN], referenceData[RAP], referenceData[RAR];
-    left_leg_angles<< referenceData[LHY], referenceData[LHR], referenceData[LHP], referenceData[LKN], referenceData[LAP], referenceData[LAR];
+    right_leg_angles<< referenceData[RHY], referenceData[RHR], referenceData[RHP], referenceData[RKN], referenceData[RAP], referenceData[RAR],0,0,0,0;
+    left_leg_angles<< referenceData[LHY], referenceData[LHR], referenceData[LHP], referenceData[LKN], referenceData[LAP], referenceData[LAR],0,0,0,0;
 
     bool left_arm_in_limit=false;
     bool right_arm_in_limit=false;
@@ -124,12 +124,12 @@ void gotoFirstPosition(double referenceData[], Hubo_Control &hubo){
         hubo.setLeftLegAngles( left_leg_angles); // Notice that the second argument is not passed in, making it default to "false"
         hubo.setRightLegAngles( right_leg_angles); // Notice that the second argument is not passed in, making it default to "false"
      
-        hubo.sendControls(); // This will send off all the latest control commands over ACH
+        //hubo.sendControls(); // This will send off all the latest control commands over ACH
     }
 
 }
 
-void gotoNewPosition(double referenceData[], double bufferedData[], int resample_ratio, Hubo_Control &hubo){
+void gotoNewPosition(double referenceData[], double bufferedData[], int resample_ratio, Hubo_Control &hubo, FILE * resultFile){
     ArmVector  left_arm_angles; // This declares "angles" as a dynamic array of ArmVectors with a starting array length of 5 
     ArmVector  right_arm_angles; // This declares "angles" as a dynamic array of ArmVectors with a starting array length of 5 
     ArmVector  left_leg_angles; // This declares "angles" as a dynamic array of ArmVectors with a starting array length of 5 
@@ -178,30 +178,37 @@ void gotoNewPosition(double referenceData[], double bufferedData[], int resample
        	joint_array[37]=LF3;   
        	joint_array[38]=LF4;  
        	joint_array[39]=LF5;    
-    	
+    
+     //printf("---------------------------------------\n");
+
      for (int iterator=1; iterator<=resample_ratio; iterator++){
 
 	    double multiplier = (double)iterator/(double)resample_ratio;
 	    interpolatedData = interpolate_linear(referenceData, bufferedData, multiplier); 
 
-	    left_arm_angles<< interpolatedData[LSP], interpolatedData[LSR], interpolatedData[LSY], interpolatedData[LEB], interpolatedData[LWY], interpolatedData[LWP], interpolatedData[LWR];
-	    right_arm_angles<< interpolatedData[RSP], interpolatedData[RSR], interpolatedData[RSY], interpolatedData[REB], interpolatedData[RWY], interpolatedData[RWP], interpolatedData[RWR];
+	    left_arm_angles<< interpolatedData[LSP], interpolatedData[LSR], interpolatedData[LSY], interpolatedData[LEB], interpolatedData[LWY], interpolatedData[LWP], interpolatedData[LWR],0,0,0;
+	    right_arm_angles<< interpolatedData[RSP], interpolatedData[RSR], interpolatedData[RSY], interpolatedData[REB], interpolatedData[RWY], interpolatedData[RWP], interpolatedData[RWR],0,0,0;
     
-	    right_leg_angles<< interpolatedData[RHY], interpolatedData[RHR], interpolatedData[RHP], interpolatedData[RKN], interpolatedData[RAP], interpolatedData[RAR];
-	    left_leg_angles<< interpolatedData[LHY], interpolatedData[LHR], interpolatedData[LHP], interpolatedData[LKN], interpolatedData[LAP], interpolatedData[LAR];
+	    right_leg_angles<< interpolatedData[RHY], interpolatedData[RHR], interpolatedData[RHP], interpolatedData[RKN], interpolatedData[RAP], interpolatedData[RAR],0,0,0,0;
+	    left_leg_angles<< interpolatedData[LHY], interpolatedData[LHR], interpolatedData[LHP], interpolatedData[LKN], interpolatedData[LAP], interpolatedData[LAR],0,0,0,0;
 
 	    hubo.update(true);
 
     	for (int joint=0; joint<number_of_joints; joint++){
  		hubo.passJointAngle(joint_array[joint], interpolatedData[joint]);
-		printf("%d    ->    %lf", joint_array[joint], interpolatedData[joint]);
-    	} 
-   	hubo.sendControls(); // This will send off all the latest control commands over ACH
+		fprintf(resultFile,"%f ",interpolatedData[joint]);
+	}
+	fprintf(resultFile," \n"); 
+	fflush(resultFile);
+ 	//hubo.sendControls(); // This will send off all the latest control commands over ACH
  
     }// end of iterator loop
 }
 
 double* interpolate_linear (double referenceData[], double bufferedData[], double multiplier){
+	if (multiplier >1){
+		multiplier=1;
+	}
 	double* interpolatedData = new double[number_of_joints];
 	for (int joint=0; joint<number_of_joints; joint++){
 		interpolatedData[joint]=bufferedData[joint]+(referenceData[joint]-bufferedData[joint])*multiplier;
@@ -210,38 +217,49 @@ double* interpolate_linear (double referenceData[], double bufferedData[], doubl
 }
 
 int main() {
-    	Hubo_Control hubo;
-
+    	printf("starting the follow trajectory \n");
+	Hubo_Control hubo;
+	
+	printf("after \n");
+	fflush(stdout);
 	char str[1000];
         FILE *fp;               // file pointer
-	char* filename ="trajectory-file.traj";
+	char* filename ="./src/trajectory-file.traj";
         bool first_line=true;
 	int frequency=200;
 	int input_file_frequency=25;
 	int resample_ratio=frequency/input_file_frequency;
+	int line_counter=0;
 
 	fp = fopen(filename,"r");
         if(!fp) {
                 printf("No Trajectory File!!!\n");
                 return 1;  // exit if not file
         }
-	
+  	printf ("starting the follow \n");	
 	double* referenceData = new double[number_of_joints];
 	double* bufferedData  = new double[number_of_joints];
+	FILE * resultFile;
+	resultFile =fopen("./src/result.traj","w");
         while(fgets(str,sizeof(str),fp) != NULL) {
+		line_counter++;
 		referenceData=getArg(str);
 		//printDoubleArray(referenceData);
 		if (first_line==true){
 			// goto first position
-			//gotoFirstPosition(referenceData, hubo);
+			gotoFirstPosition(referenceData, hubo);
 			bufferedData=referenceData;
 			first_line=false;
+			printf("first line read and buffered \n");
 		}	
 		else{
 			//normal trajectory following
-			gotoNewPosition(referenceData, bufferedData, resample_ratio, hubo);
+			//printf("running trajectory on line %d \n", line_counter);
+			gotoNewPosition(referenceData, bufferedData, resample_ratio, hubo, resultFile);
+			bufferedData=referenceData;
 		}
 	}
+	fclose(resultFile);
 	fclose(fp);
 }
 
