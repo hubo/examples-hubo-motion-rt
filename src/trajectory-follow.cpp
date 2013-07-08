@@ -181,6 +181,7 @@ void gotoNewPosition(double referenceData[], double bufferedData[], int resample
     
      //printf("---------------------------------------\n");
 
+     checkTrajectory(referenceData, bufferedData);
      for (int iterator=1; iterator<=resample_ratio; iterator++){
 
 	    double multiplier = (double)iterator/(double)resample_ratio;
@@ -215,6 +216,20 @@ double* interpolate_linear (double referenceData[], double bufferedData[], doubl
 	}
 	return interpolatedData;
 }
+
+bool checkTrajectory (double nextPosition[], double currentPosition[]){
+        bool is_correct=true;
+        double threshold =0.03;
+        for (int joint=0; joint<number_of_joints; joint++){
+                if (abs(nextPosition[joint]-currentPosition[joint])>threshold){
+                        is_correct=false;
+                        printf("\n too much jump in the joint %d -- from %f to %f ", joint, currentPosition[joint], nextPosition[joint]);
+                }
+        }
+        return is_correct;
+}
+
+
 
 int main() {
     	printf("starting the follow trajectory \n");
