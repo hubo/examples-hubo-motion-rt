@@ -125,7 +125,7 @@ void gotoFirstPosition(double referenceData[], Hubo_Control &hubo){
         hubo.setLeftLegAngles( left_leg_angles); // Notice that the second argument is not passed in, making it default to "false"
         hubo.setRightLegAngles( right_leg_angles); // Notice that the second argument is not passed in, making it default to "false"
      
-        //hubo.sendControls(); // This will send off all the latest control commands over ACH
+        hubo.sendControls(); // This will send off all the latest control commands over ACH
     }
 
 }
@@ -197,12 +197,14 @@ void gotoNewPosition(double referenceData[], double bufferedData[], int resample
 	    hubo.update(true);
 
     	for (int joint=0; joint<number_of_joints; joint++){
- 		hubo.passJointAngle(joint_array[joint], interpolatedData[joint]);
-		fprintf(resultFile,"%f ",interpolatedData[joint]);
+		if (joint_array[joint]!=WST){
+	 		hubo.passJointAngle(joint_array[joint], interpolatedData[joint]);
+			fprintf(resultFile,"%f ",interpolatedData[joint]);
+		}
 	}
 	fprintf(resultFile," \n"); 
 	fflush(resultFile);
- 	//hubo.sendControls(); // This will send off all the latest control commands over ACH
+ 	hubo.sendControls(); // This will send off all the latest control commands over ACH
  
     }// end of iterator loop
 }
