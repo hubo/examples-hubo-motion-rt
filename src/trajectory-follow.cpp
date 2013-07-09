@@ -161,7 +161,7 @@ void gotoFirstPosition(double referenceData[], Hubo_Control &hubo){
         hubo.setLeftLegAngles( left_leg_angles); // Notice that the second argument is not passed in, making it default to "false"
         hubo.setRightLegAngles( right_leg_angles); // Notice that the second argument is not passed in, making it default to "false"
      
-        //hubo.sendControls(); // This will send off all the latest control commands over ACH
+        hubo.sendControls(); // This will send off all the latest control commands over ACH
     }
 
 }
@@ -240,7 +240,7 @@ void gotoNewPosition(double referenceData[], double bufferedData[], int resample
 	}
 	fprintf(resultFile," \n"); 
 	fflush(resultFile);
- 	//hubo.sendControls(); // This will send off all the latest control commands over ACH
+ 	hubo.sendControls(); // This will send off all the latest control commands over ACH
  
     }// end of iterator loop
 }
@@ -269,10 +269,10 @@ bool checkTrajectory (double nextPosition[], double currentPosition[]){
 }
 
 void printFTSensorValues(Hubo_Control &hubo){
-	printf("Left Foot fz is %f ", hubo.getLeftFootFz());	
-	printf("Right Foot fz is %f ", hubo.getRightFootFz());	
-	printf("Left Hand fz is %f ", hubo.getLeftHandFz());	
-	printf("RightHand fz is %f \n", hubo.getRightHandFz());	
+	printf("Left Foot fz is %f	 ", hubo.getLeftFootFz());	
+	printf("Right Foot fz is %f	 ", hubo.getRightFootFz());	
+	printf("Left Hand fz is %f 	", hubo.getLeftHandFz());	
+	printf("RightHand fz is %f\n", hubo.getRightHandFz());	
 }
 
 int main(int argc, char* argv[]) {
@@ -291,17 +291,17 @@ int main(int argc, char* argv[]) {
 	int line_counter=0;
 
 	if (argc>1){
-	//	filename=argv[0];
-		printf("file is  %c \n",argv[1]);
+		filename=argv[0];
+		printf("file is  %s \n",argv[1]);
 	}
 	if (argc>2){
-	//	input_file_frequency=atoi(argv[1]);
+		input_file_frequency=atoi(argv[1]);
 		printf(" input freq is  %d  \n",atoi(argv[2])); 
 	}
 
+/*
 	int* b = new int[4];
-
-/*	while(1){
+	while(1){
 		printFTSensorValues(hubo)
 		usleep(1000);
 		//b=contactArray(hubo);
@@ -333,7 +333,6 @@ int main(int argc, char* argv[]) {
 		if (paused==false){
 			line_counter++;
 			referenceData=getArg(str);
-			//printDoubleArray(referenceData);
 			if (first_line==true){
 				// goto first position
 				gotoFirstPosition(referenceData, hubo);
@@ -343,7 +342,6 @@ int main(int argc, char* argv[]) {
 			}	
 			else{
 				//normal trajectory following
-				//printf("running trajectory on line %d \n", line_counter);
 				gotoNewPosition(referenceData, bufferedData, resample_ratio, hubo, resultFile);
 				bufferedData=referenceData;
 			}
