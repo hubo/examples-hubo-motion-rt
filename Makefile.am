@@ -1,7 +1,7 @@
 ACLOCAL_AMFLAGS = -I m4
 AM_CPPFLAGS = -I$(top_srcdir)/include -L/usr/local/lib
 
-ctrllibs = -lm -lach -lc -lhuboctrl -ldaemonizer -lrt -lhuboparams
+ctrllibs = -lm -lach -lc -lhuboctrl -ldaemonizer -lrt -lhuboparams -lncurses
 
 # List the binary files you want to generate:
 bin_PROGRAMS = ctrl-sample ctrl-arm-sample ctrl-trajectory-sample trajectory-follow

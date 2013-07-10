@@ -2,20 +2,38 @@
 #include <vector>
 #include <iostream>
 #include <fstream>
+#include <ncurses.h>
+
+#include <termio.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <stdlib.h>
+
+
 // Note that "std::vector" is a dynamic array class in C++ (not available in C)
 // This means you can use std::vector to make a variable-sized array of ArmVector
 // Even though std::vector and ArmVector have similar names, they are not directly related to each other
 using namespace std;
-
+#define number_of_joints 40 //because the file has 40 elements
 double* getArf(char* s);
 void printDoubleArray (double array[]);
 void gotoFirstPosition(double referenceData[], Hubo_Control &hubo);
-void gotoNewPosition(double referenceData[], double bufferedData[], int resample_ratio, Hubo_Control &hubo);
+void gotoNewPosition(double referenceData[], double bufferedData[], int resample_ratio, Hubo_Control &hubo, FILE * resultFile, int line_counter);
 double* interpolate_linear (double referenceData[], double bufferedData[], double multiplier);
-#define number_of_joints 40 //because the file has 40 elements
+bool checkTrajectory (double nextPosition[], double currentPosition[], int line_counter);
+int* contactArray (Hubo_Control &hubo);
+void printFTSensorValues(Hubo_Control &hubo);
+static int tty_unbuffered(int);
+static void tty_atexit(void);
+static int tty_reset(int);
+static void tweak_init();
+
+static struct termios save_termios;
+static int  ttysavefd = -1;
+
 
 double* getArg(char* s) {
-
 	double *r= new double[number_of_joints];
 	sscanf(s, "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf",
         &r[0],
@@ -70,6 +88,39 @@ void printDoubleArray (double array[]){
 	cout<<"\n-----------------------------------------------------------\n";	
 }
 
+int* contactArray (Hubo_Control &hubo){
+	int* contact_array=new int[4]; //[4] ;//= {-1};
+	double fz_contact_threshold=50;
+
+//	double test=hubo.getLeftHandFz();
+	if (hubo.getLeftHandFz()>fz_contact_threshold){
+		contact_array[0]=1;
+	}
+	else{
+		contact_array[0]=0;//false;
+	}
+
+	if (hubo.getRightHandFz()>fz_contact_threshold){
+		contact_array[1]=1;//true;
+	}
+	else{
+		contact_array[1]=0;//false;
+	}
+	if (hubo.getLeftFootFz()>fz_contact_threshold){
+		contact_array[2]=hubo.getLeftFootFz();//1;//true;
+	}
+	else{
+		contact_array[2]=0;//false;
+	}
+	if (hubo.getRightFootFz()>fz_contact_threshold){
+		contact_array[3]=1;//true;
+	}
+	else{
+		contact_array[3]=0;//false;
+	}
+	return contact_array;
+}
+
 void gotoFirstPosition(double referenceData[], Hubo_Control &hubo){
     double tol = 0.075; // This will be the allowed tolerance before moving to the next point
     ArmVector  left_arm_angles; // This declares "angles" as a dynamic array of ArmVectors with a starting array length of 5 
@@ -77,11 +128,11 @@ void gotoFirstPosition(double referenceData[], Hubo_Control &hubo){
     ArmVector  left_leg_angles; // This declares "angles" as a dynamic array of ArmVectors with a starting array length of 5 
     ArmVector  right_leg_angles; // This declares "angles" as a dynamic array of ArmVectors with a starting array length of 5 
 
-    left_arm_angles<< referenceData[LSP], referenceData[LSR], referenceData[LSY], referenceData[LEB], referenceData[LWY], referenceData[LWP], referenceData[LWR];
-    right_arm_angles<< referenceData[RSP], referenceData[RSR], referenceData[RSY], referenceData[REB], referenceData[RWY], referenceData[RWP], referenceData[RWR];
+    left_arm_angles<< referenceData[LSP], referenceData[LSR], referenceData[LSY], referenceData[LEB], referenceData[LWY], referenceData[LWP], referenceData[LWR], 0,0,0;
+    right_arm_angles<< referenceData[RSP], referenceData[RSR], referenceData[RSY], referenceData[REB], referenceData[RWY], referenceData[RWP], referenceData[RWR],0,0,0;
     
-    right_leg_angles<< referenceData[RHY], referenceData[RHR], referenceData[RHP], referenceData[RKN], referenceData[RAP], referenceData[RAR];
-    left_leg_angles<< referenceData[LHY], referenceData[LHR], referenceData[LHP], referenceData[LKN], referenceData[LAP], referenceData[LAR];
+    right_leg_angles<< referenceData[RHY], referenceData[RHR], referenceData[RHP], referenceData[RKN], referenceData[RAP], referenceData[RAR],0,0,0,0;
+    left_leg_angles<< referenceData[LHY], referenceData[LHR], referenceData[LHP], referenceData[LKN], referenceData[LAP], referenceData[LAR],0,0,0,0;
 
     bool left_arm_in_limit=false;
     bool right_arm_in_limit=false;
@@ -126,10 +177,9 @@ void gotoFirstPosition(double referenceData[], Hubo_Control &hubo){
      
         hubo.sendControls(); // This will send off all the latest control commands over ACH
     }
-
 }
 
-void gotoNewPosition(double referenceData[], double bufferedData[], int resample_ratio, Hubo_Control &hubo){
+void gotoNewPosition(double referenceData[], double bufferedData[], int resample_ratio, Hubo_Control &hubo, FILE * resultFile, int line_counter){
     ArmVector  left_arm_angles; // This declares "angles" as a dynamic array of ArmVectors with a starting array length of 5 
     ArmVector  right_arm_angles; // This declares "angles" as a dynamic array of ArmVectors with a starting array length of 5 
     ArmVector  left_leg_angles; // This declares "angles" as a dynamic array of ArmVectors with a starting array length of 5 
@@ -178,30 +228,38 @@ void gotoNewPosition(double referenceData[], double bufferedData[], int resample
        	joint_array[37]=LF3;   
        	joint_array[38]=LF4;  
        	joint_array[39]=LF5;    
-    	
+    
+     checkTrajectory(referenceData, bufferedData, line_counter);
      for (int iterator=1; iterator<=resample_ratio; iterator++){
 
 	    double multiplier = (double)iterator/(double)resample_ratio;
 	    interpolatedData = interpolate_linear(referenceData, bufferedData, multiplier); 
 
-	    left_arm_angles<< interpolatedData[LSP], interpolatedData[LSR], interpolatedData[LSY], interpolatedData[LEB], interpolatedData[LWY], interpolatedData[LWP], interpolatedData[LWR];
-	    right_arm_angles<< interpolatedData[RSP], interpolatedData[RSR], interpolatedData[RSY], interpolatedData[REB], interpolatedData[RWY], interpolatedData[RWP], interpolatedData[RWR];
+	    left_arm_angles<< interpolatedData[LSP], interpolatedData[LSR], interpolatedData[LSY], interpolatedData[LEB], interpolatedData[LWY], interpolatedData[LWP], interpolatedData[LWR],0,0,0;
+	    right_arm_angles<< interpolatedData[RSP], interpolatedData[RSR], interpolatedData[RSY], interpolatedData[REB], interpolatedData[RWY], interpolatedData[RWP], interpolatedData[RWR],0,0,0;
     
-	    right_leg_angles<< interpolatedData[RHY], interpolatedData[RHR], interpolatedData[RHP], interpolatedData[RKN], interpolatedData[RAP], interpolatedData[RAR];
-	    left_leg_angles<< interpolatedData[LHY], interpolatedData[LHR], interpolatedData[LHP], interpolatedData[LKN], interpolatedData[LAP], interpolatedData[LAR];
+	    right_leg_angles<< interpolatedData[RHY], interpolatedData[RHR], interpolatedData[RHP], interpolatedData[RKN], interpolatedData[RAP], interpolatedData[RAR],0,0,0,0;
+	    left_leg_angles<< interpolatedData[LHY], interpolatedData[LHR], interpolatedData[LHP], interpolatedData[LKN], interpolatedData[LAP], interpolatedData[LAR],0,0,0,0;
 
 	    hubo.update(true);
 
     	for (int joint=0; joint<number_of_joints; joint++){
- 		hubo.passJointAngle(joint_array[joint], interpolatedData[joint]);
-		printf("%d    ->    %lf", joint_array[joint], interpolatedData[joint]);
-    	} 
-   	hubo.sendControls(); // This will send off all the latest control commands over ACH
+		if (joint_array[joint]!=WST){
+	 		hubo.passJointAngle(joint_array[joint], interpolatedData[joint]);
+			fprintf(resultFile,"%f ",interpolatedData[joint]);
+		}
+	}
+	fprintf(resultFile," \n"); 
+	fflush(resultFile);
+ 	hubo.sendControls(); // This will send off all the latest control commands over ACH
  
     }// end of iterator loop
 }
 
 double* interpolate_linear (double referenceData[], double bufferedData[], double multiplier){
+	if (multiplier >1){
+		multiplier=1;
+	}
 	double* interpolatedData = new double[number_of_joints];
 	for (int joint=0; joint<number_of_joints; joint++){
 		interpolatedData[joint]=bufferedData[joint]+(referenceData[joint]-bufferedData[joint])*multiplier;
@@ -209,40 +267,118 @@ double* interpolate_linear (double referenceData[], double bufferedData[], doubl
 	return interpolatedData;
 }
 
-int main() {
-    	Hubo_Control hubo;
+bool checkTrajectory (double nextPosition[], double currentPosition[], int line_counter){
+        bool is_correct=true;
+        double threshold =0.03;
+        for (int joint=0; joint<number_of_joints; joint++){
+                if (abs(nextPosition[joint]-currentPosition[joint])>threshold){
+                        is_correct=false;
+                        printf("\n too much jump in the joint %d -- from %f to %f  in line %d", joint, currentPosition[joint], nextPosition[joint], line_counter);
+                }
+        }
+        return is_correct;
+}
 
+void printFTSensorValues(Hubo_Control &hubo){
+	printf("Left Foot fz is %f	 ", hubo.getLeftFootFz());	
+	printf("Right Foot fz is %f	 ", hubo.getRightFootFz());	
+	printf("Left Hand fz is %f 	", hubo.getLeftHandFz());	
+	printf("RightHand fz is %f\n", hubo.getRightHandFz());	
+}
+
+int main(int argc, char* argv[]) {
+    	printf("starting the follow trajectory \n");
+	Hubo_Control hubo;
+	
+	printf("after \n");
+	fflush(stdout);
 	char str[1000];
         FILE *fp;               // file pointer
-	char* filename ="trajectory-file.traj";
+	char* filename ="./src/trajectory-file.traj";
         bool first_line=true;
 	int frequency=200;
 	int input_file_frequency=25;
 	int resample_ratio=frequency/input_file_frequency;
+	int line_counter=0;
 
+	if (argc>1){
+		filename=argv[1];
+		printf("file is  %s \n",argv[1]);
+	}
+	if (argc>2){
+		input_file_frequency=atoi(argv[2]);
+		printf(" input freq is  %d  \n",atoi(argv[2])); 
+	}
+	if (input_file_frequency <10){
+		printf("too low input frequncy");
+		return 0;
+	}
+	if (input_file_frequency >100){
+		printf("too high input frequency");
+		return 0;
+	}
+
+/*
+	int* b = new int[4];
+	while(1){
+		printFTSensorValues(hubo)
+		usleep(1000);
+		//b=contactArray(hubo);
+		//printf("LeftH fz %d, RightH fz is %d, LeftL fz is %d, RightL fz is %d  \n",b[0],b[1],b[2],b[3]);//(b[0])?"true":"false",(b[1])?"true":"false",(b[2])?"true":"false",(b[3])?"true":"false"); 
+	}
+*/
+	
 	fp = fopen(filename,"r");
         if(!fp) {
                 printf("No Trajectory File!!!\n");
                 return 1;  // exit if not file
         }
-	
+
+  	printf ("starting the follow \n");	
 	double* referenceData = new double[number_of_joints];
 	double* bufferedData  = new double[number_of_joints];
-        while(fgets(str,sizeof(str),fp) != NULL) {
-		referenceData=getArg(str);
-		//printDoubleArray(referenceData);
-		if (first_line==true){
-			// goto first position
-			//gotoFirstPosition(referenceData, hubo);
-			bufferedData=referenceData;
-			first_line=false;
-		}	
-		else{
-			//normal trajectory following
-			gotoNewPosition(referenceData, bufferedData, resample_ratio, hubo);
+	FILE * resultFile;
+	resultFile =fopen("./src/result.traj","w");
+	char c;
+	bool paused=false;
+        tweak_init();
+
+	while(fgets(str,sizeof(str),fp) != NULL) {
+		if ( read(STDIN_FILENO, &c, 1) == 1) {
+                	if  (c=='p') {
+				paused=!paused;
+                	}
+            	}
+		
+		while (paused==true){
+			usleep(500000);//0.5seconds
+			if ( read(STDIN_FILENO, &c, 1) == 1) {
+               		 	if  (c=='p') {
+					paused=!paused;
+                		}
+            		}
+		}
+		if (paused==false){
+			line_counter++;
+			referenceData=getArg(str);
+			if (first_line==true){
+				// goto first position
+				gotoFirstPosition(referenceData, hubo);
+				bufferedData=referenceData;
+				first_line=false;
+				printf("first line read and buffered \n");
+			}	
+			else{
+				//normal trajectory following
+				//printf("line is %d \n", line_counter);
+				gotoNewPosition(referenceData, bufferedData, resample_ratio, hubo, resultFile, line_counter);
+				bufferedData=referenceData;
+			}
 		}
 	}
+	fclose(resultFile);
 	fclose(fp);
+	
 }
 
 
@@ -289,4 +425,69 @@ int main() {
         &r->ref[LF3],	 7
         &r->ref[LF4],	 8
         &r->ref[LF5]	 9
-*/ 
+*/
+
+// KEyboard Input
+
+static int
+tty_unbuffered(int fd)      /* put terminal into a raw mode */
+{
+    struct termios  buf;
+
+    if (tcgetattr(fd, &buf) < 0)
+        return(-1);
+
+    save_termios = buf; /* structure copy */
+
+    /* echo off, canonical mode off */
+    buf.c_lflag &= ~(ECHO | ICANON);
+
+    /* 1 byte at a time, no timer */
+    buf.c_cc[VMIN] = 1;
+    buf.c_cc[VTIME] = 0;
+    if (tcsetattr(fd, TCSAFLUSH, &buf) < 0)
+        return(-1);
+
+    ttysavefd = fd;
+    return(0);
+}
+
+static int
+tty_reset(int fd)       /* restore terminal's mode */
+{
+    if (tcsetattr(fd, TCSAFLUSH, &save_termios) < 0)
+        return(-1);
+    return(0);
+}
+
+static void
+tty_atexit(void)        /* can be set up by atexit(tty_atexit) */
+{
+    if (ttysavefd >= 0)
+        tty_reset(ttysavefd);
+}
+
+static void
+tweak_init()
+{
+   /* make stdin unbuffered */
+    if (tty_unbuffered(STDIN_FILENO) < 0) {
+        std::cout << "Set tty unbuffered error" << std::endl;
+        exit(1);
+    }
+
+    atexit(tty_atexit);
+
+    /* nonblock I/O */
+    int flags;
+    if ( (flags = fcntl(STDIN_FILENO, F_GETFL, 0)) == 1) {
+        perror("fcntl get flag error");
+        exit(1);
+    }
+    if (fcntl(STDIN_FILENO, F_SETFL, flags | O_NONBLOCK) == -1) {
+        perror("fcntl set flag error");
+        exit(1);
+    }
+}
+
+ 
