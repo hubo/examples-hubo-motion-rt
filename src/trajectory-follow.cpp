@@ -7,19 +7,18 @@
 // This means you can use std::vector to make a variable-sized array of ArmVector
 // Even though std::vector and ArmVector have similar names, they are not directly related to each other
 using namespace std;
-
+#define number_of_joints 40 //because the file has 40 elements
 double* getArf(char* s);
 void printDoubleArray (double array[]);
 void gotoFirstPosition(double referenceData[], Hubo_Control &hubo);
 void gotoNewPosition(double referenceData[], double bufferedData[], int resample_ratio, Hubo_Control &hubo, FILE * resultFile);
 double* interpolate_linear (double referenceData[], double bufferedData[], double multiplier);
-#define number_of_joints 40 //because the file has 40 elements
 bool checkTrajectory (double nextPosition[], double currentPosition[]);
 int* contactArray (Hubo_Control &hubo);
 void printFTSensorValues(Hubo_Control &hubo);
-	
-double* getArg(char* s) {
 
+
+double* getArg(char* s) {
 	double *r= new double[number_of_joints];
 	sscanf(s, "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf",
         &r[0],
@@ -163,7 +162,6 @@ void gotoFirstPosition(double referenceData[], Hubo_Control &hubo){
      
         hubo.sendControls(); // This will send off all the latest control commands over ACH
     }
-
 }
 
 void gotoNewPosition(double referenceData[], double bufferedData[], int resample_ratio, Hubo_Control &hubo, FILE * resultFile){
@@ -216,8 +214,6 @@ void gotoNewPosition(double referenceData[], double bufferedData[], int resample
        	joint_array[38]=LF4;  
        	joint_array[39]=LF5;    
     
-     //printf("---------------------------------------\n");
-
      checkTrajectory(referenceData, bufferedData);
      for (int iterator=1; iterator<=resample_ratio; iterator++){
 
