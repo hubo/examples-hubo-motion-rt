@@ -19,9 +19,9 @@ using namespace std;
 double* getArf(char* s);
 void printDoubleArray (double array[]);
 void gotoFirstPosition(double referenceData[], Hubo_Control &hubo);
-void gotoNewPosition(double referenceData[], double bufferedData[], int resample_ratio, Hubo_Control &hubo, FILE * resultFile);
+void gotoNewPosition(double referenceData[], double bufferedData[], int resample_ratio, Hubo_Control &hubo, FILE * resultFile, int line_counter);
 double* interpolate_linear (double referenceData[], double bufferedData[], double multiplier);
-bool checkTrajectory (double nextPosition[], double currentPosition[]);
+bool checkTrajectory (double nextPosition[], double currentPosition[], int line_counter);
 int* contactArray (Hubo_Control &hubo);
 void printFTSensorValues(Hubo_Control &hubo);
 static int tty_unbuffered(int);
@@ -179,7 +179,7 @@ void gotoFirstPosition(double referenceData[], Hubo_Control &hubo){
     }
 }
 
-void gotoNewPosition(double referenceData[], double bufferedData[], int resample_ratio, Hubo_Control &hubo, FILE * resultFile){
+void gotoNewPosition(double referenceData[], double bufferedData[], int resample_ratio, Hubo_Control &hubo, FILE * resultFile, int line_counter){
     ArmVector  left_arm_angles; // This declares "angles" as a dynamic array of ArmVectors with a starting array length of 5 
     ArmVector  right_arm_angles; // This declares "angles" as a dynamic array of ArmVectors with a starting array length of 5 
     ArmVector  left_leg_angles; // This declares "angles" as a dynamic array of ArmVectors with a starting array length of 5 
@@ -229,7 +229,7 @@ void gotoNewPosition(double referenceData[], double bufferedData[], int resample
        	joint_array[38]=LF4;  
        	joint_array[39]=LF5;    
     
-     checkTrajectory(referenceData, bufferedData);
+     checkTrajectory(referenceData, bufferedData, line_counter);
      for (int iterator=1; iterator<=resample_ratio; iterator++){
 
 	    double multiplier = (double)iterator/(double)resample_ratio;
@@ -267,13 +267,13 @@ double* interpolate_linear (double referenceData[], double bufferedData[], doubl
 	return interpolatedData;
 }
 
-bool checkTrajectory (double nextPosition[], double currentPosition[]){
+bool checkTrajectory (double nextPosition[], double currentPosition[], int line_counter){
         bool is_correct=true;
         double threshold =0.03;
         for (int joint=0; joint<number_of_joints; joint++){
                 if (abs(nextPosition[joint]-currentPosition[joint])>threshold){
                         is_correct=false;
-                        printf("\n too much jump in the joint %d -- from %f to %f ", joint, currentPosition[joint], nextPosition[joint]);
+                        printf("\n too much jump in the joint %d -- from %f to %f  in line %d", joint, currentPosition[joint], nextPosition[joint], line_counter);
                 }
         }
         return is_correct;
@@ -302,12 +302,20 @@ int main(int argc, char* argv[]) {
 	int line_counter=0;
 
 	if (argc>1){
-		//filename=argv[0];
+		filename=argv[1];
 		printf("file is  %s \n",argv[1]);
 	}
 	if (argc>2){
-		//input_file_frequency=atoi(argv[1]);
+		input_file_frequency=atoi(argv[2]);
 		printf(" input freq is  %d  \n",atoi(argv[2])); 
+	}
+	if (input_file_frequency <10){
+		printf("too low input frequncy");
+		return 0;
+	}
+	if (input_file_frequency >100){
+		printf("too high input frequency");
+		return 0;
 	}
 
 /*
@@ -363,7 +371,7 @@ int main(int argc, char* argv[]) {
 			else{
 				//normal trajectory following
 				//printf("line is %d \n", line_counter);
-				gotoNewPosition(referenceData, bufferedData, resample_ratio, hubo, resultFile);
+				gotoNewPosition(referenceData, bufferedData, resample_ratio, hubo, resultFile, line_counter);
 				bufferedData=referenceData;
 			}
 		}
