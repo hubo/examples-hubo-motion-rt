@@ -3,6 +3,14 @@
 #include <iostream>
 #include <fstream>
 #include <ncurses.h>
+
+#include <termio.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <stdlib.h>
+
+
 // Note that "std::vector" is a dynamic array class in C++ (not available in C)
 // This means you can use std::vector to make a variable-sized array of ArmVector
 // Even though std::vector and ArmVector have similar names, they are not directly related to each other
@@ -16,6 +24,13 @@ double* interpolate_linear (double referenceData[], double bufferedData[], doubl
 bool checkTrajectory (double nextPosition[], double currentPosition[]);
 int* contactArray (Hubo_Control &hubo);
 void printFTSensorValues(Hubo_Control &hubo);
+static int tty_unbuffered(int);
+static void tty_atexit(void);
+static int tty_reset(int);
+static void tweak_init();
+
+static struct termios save_termios;
+static int  ttysavefd = -1;
 
 
 double* getArg(char* s) {
@@ -287,11 +302,11 @@ int main(int argc, char* argv[]) {
 	int line_counter=0;
 
 	if (argc>1){
-		filename=argv[0];
+		//filename=argv[0];
 		printf("file is  %s \n",argv[1]);
 	}
 	if (argc>2){
-		input_file_frequency=atoi(argv[1]);
+		//input_file_frequency=atoi(argv[1]);
 		printf(" input freq is  %d  \n",atoi(argv[2])); 
 	}
 
@@ -316,15 +331,24 @@ int main(int argc, char* argv[]) {
 	double* bufferedData  = new double[number_of_joints];
 	FILE * resultFile;
 	resultFile =fopen("./src/result.traj","w");
-	char character_input;
+	char c;
 	bool paused=false;
-	initscr();
-	nodelay(stdscr, TRUE);
-        while(fgets(str,sizeof(str),fp) != NULL) {
-		character_input=getch();
-		if (character_input=' '){
-			paused = !paused;
-			usleep(500000);
+        tweak_init();
+
+	while(fgets(str,sizeof(str),fp) != NULL) {
+		if ( read(STDIN_FILENO, &c, 1) == 1) {
+                	if  (c=='p') {
+				paused=!paused;
+                	}
+            	}
+		
+		while (paused==true){
+			usleep(500000);//0.5seconds
+			if ( read(STDIN_FILENO, &c, 1) == 1) {
+               		 	if  (c=='p') {
+					paused=!paused;
+                		}
+            		}
 		}
 		if (paused==false){
 			line_counter++;
@@ -338,6 +362,7 @@ int main(int argc, char* argv[]) {
 			}	
 			else{
 				//normal trajectory following
+				//printf("line is %d \n", line_counter);
 				gotoNewPosition(referenceData, bufferedData, resample_ratio, hubo, resultFile);
 				bufferedData=referenceData;
 			}
@@ -392,4 +417,69 @@ int main(int argc, char* argv[]) {
         &r->ref[LF3],	 7
         &r->ref[LF4],	 8
         &r->ref[LF5]	 9
-*/ 
+*/
+
+// KEyboard Input
+
+static int
+tty_unbuffered(int fd)      /* put terminal into a raw mode */
+{
+    struct termios  buf;
+
+    if (tcgetattr(fd, &buf) < 0)
+        return(-1);
+
+    save_termios = buf; /* structure copy */
+
+    /* echo off, canonical mode off */
+    buf.c_lflag &= ~(ECHO | ICANON);
+
+    /* 1 byte at a time, no timer */
+    buf.c_cc[VMIN] = 1;
+    buf.c_cc[VTIME] = 0;
+    if (tcsetattr(fd, TCSAFLUSH, &buf) < 0)
+        return(-1);
+
+    ttysavefd = fd;
+    return(0);
+}
+
+static int
+tty_reset(int fd)       /* restore terminal's mode */
+{
+    if (tcsetattr(fd, TCSAFLUSH, &save_termios) < 0)
+        return(-1);
+    return(0);
+}
+
+static void
+tty_atexit(void)        /* can be set up by atexit(tty_atexit) */
+{
+    if (ttysavefd >= 0)
+        tty_reset(ttysavefd);
+}
+
+static void
+tweak_init()
+{
+   /* make stdin unbuffered */
+    if (tty_unbuffered(STDIN_FILENO) < 0) {
+        std::cout << "Set tty unbuffered error" << std::endl;
+        exit(1);
+    }
+
+    atexit(tty_atexit);
+
+    /* nonblock I/O */
+    int flags;
+    if ( (flags = fcntl(STDIN_FILENO, F_GETFL, 0)) == 1) {
+        perror("fcntl get flag error");
+        exit(1);
+    }
+    if (fcntl(STDIN_FILENO, F_SETFL, flags | O_NONBLOCK) == -1) {
+        perror("fcntl set flag error");
+        exit(1);
+    }
+}
+
+ 
